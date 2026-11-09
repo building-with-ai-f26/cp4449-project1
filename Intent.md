@@ -46,7 +46,12 @@ Things a person can't realistically do by hand:
 
 **Positioning:** Travel AI is crowded (Mindtrip, Layla, Wanderlog, ChatGPT). Nextstop's edge is the approach — layered, I decide, trade-offs + full picture + "watch out for" — and the structure (remembers locked decisions, side-by-side comparisons, guides the next step) so I'm not managing a long back-and-forth chat.
 
-**Agent vision (Build 3+):** An agent searches real sources — flights, hotels, Airbnb, Vrbo — to replace AI estimates with real prices and connections. Need to confirm which data sources allow automated access; some sites restrict it.
+**Agent vision (Build 3+):** An agent searches real sources — flights, hotels, Airbnb, Vrbo — to replace AI estimates with real prices and connections.
+
+**What I learned testing it (Build 1):** I had an agent search Airbnb, Vrbo, and hotel sites for listings with specific qualities and report back. It worked, but these sites' terms of service prohibit bots and scrapers, and automated searching can get accounts flagged. Decisions:
+- Nextstop will use **official data sources** (partner/affiliate programs and flight-data APIs) instead of scraping. Still need to research which accept student projects. Airbnb has no public API as far as I know.
+- The app will **never log in to a user's account** on travel sites, and never book or message on their behalf.
+- For my own research: agents browse logged out, in a separate browser profile, with small occasional searches.
 
 ## 4. Rough Local Prototype
 *What did you spike this week to test the core idea, and what did you learn from throwing it at the problem?*
