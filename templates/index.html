@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nextstop · Plan one decision at a time</title>
+  <style>
+    :root {
+      --bg: #f7f7f5; --card: #fff; --text: #111827; --muted: #6b7280;
+      --border: #e5e7eb; --accent: #1d63dc; --accent-soft: #eff6ff;
+      --warn-bg: #fff7ed; --warn-text: #9a3412; --done: #15803d; --done-bg: #f0fdf4;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+           background: var(--bg); color: var(--text); line-height: 1.5; }
+    .container { max-width: 1040px; margin: 0 auto; padding: 32px 24px 80px; }
+    header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; }
+    .logo { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+    .logo span { color: var(--accent); }
+    .link-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; text-decoration: underline; }
+
+    /* Trip progress bar */
+    .progress { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+                padding: 14px 18px; margin-bottom: 24px; }
+    .progress-title { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 8px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { font-size: 13px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+    .chip.done { background: var(--done-bg); border-color: #bbf7d0; color: var(--done); font-weight: 600; }
+    .chip.active { background: var(--accent-soft); border-color: #bfdbfe; color: var(--accent); font-weight: 600; }
+
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; }
+    h2 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.01em; }
+    .sub { color: var(--muted); margin: 0 0 20px; }
+    label.field { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: center; margin-bottom: 10px; font-weight: 600; font-size: 14px; }
+    input[type=text], textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font: inherit; font-weight: 400; }
+    .radios { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
+    .radios label { border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; cursor: pointer; font-size: 14px; }
+    .radios input { margin-right: 6px; }
+    .radios label.disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 18px;
+           font-weight: 600; font-size: 15px; cursor: pointer; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; align-items: center; }
+
+    /* Option cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px;
+            display: flex; flex-direction: column; gap: 10px; }
+    .card.checked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    .card-head { display: flex; gap: 10px; align-items: flex-start; }
+    .card-head input { margin-top: 5px; width: 18px; height: 18px; }
+    .card h3 { margin: 0; font-size: 18px; }
+    .cost { font-weight: 700; color: var(--accent); }
+    .section-label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 2px; }
+    .warn { background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+    .card .btn { margin-top: auto; }
+
+    /* Compare table */
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { text-align: left; vertical-align: top; padding: 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    th { font-size: 16px; }
+    td:first-child { font-weight: 600; color: var(--muted); width: 160px; }
+    tr.warn-row td:not(:first-child) { color: var(--warn-text); }
+    .tradeoff { background: var(--accent-soft); border-radius: 10px; padding: 14px 16px; margin-top: 16px; }
+
+    /* Next decision list */
+    .next-item { display: flex; justify-content: space-between; align-items: center; gap: 16px;
+                 border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+    .next-item.top { border-color: var(--accent); background: var(--accent-soft); }
+    .next-item strong { display: block; }
+
+    .loading { text-align: center; padding: 48px; color: var(--muted); }
+    .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent);
+               border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error { background: #fef2f2; color: #991b1b; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+    .note { font-size: 12px; color: var(--muted); margin-top: 16px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">next<span>stop</span></div>
+    <button class="link-btn" onclick="startOver()">Start over</button>
+  </header>
+
+  <div class="progress">
+    <div class="progress-title">Your trip so far</div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="error"></div>
+  <div id="screen"></div>
+  <p class="note">Costs, flights, and dates are AI estimates, not live prices. Double-check before booking.</p>
+</div>
+
+<script>
+  // Category keys and labels come from app.py so there is one source of truth.
+  const CATEGORIES = {{ categories | tojson }};
+  const SHORT = { where: "Where", when: "When", length: "Length", budget: "Budget",
+                  transport: "Transport", stay: "Stay", activities: "Activities" };
+
+  // The whole trip lives here in the browser. The server never stores it.
+  let trip = { origin: "", notes: "", decided: {} };
+  let deciding = null;   // category currently being decided
+  let options = [];      // options returned for the current decision
+
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const openCategories = () => Object.keys(CATEGORIES).filter(k => !trip.decided[k]);
+
+  async function callApi(path, body) {
+    $("error").innerHTML = "";
+    const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Something went wrong.");
+    return data;
+  }
+
+  function showError(err, retry) {
+    if (retry) retry();  // re-render the previous screen first...
+    $("error").innerHTML = `<div class="error">${esc(err.message)}</div>`;  // ...then show the error above it
+  }
+
+  function loading(text) {
+    $("screen").innerHTML = `<div class="panel loading"><div class="spinner"></div>${esc(text)}</div>`;
+  }
+
+  function renderChips() {
+    $("chips").innerHTML = Object.keys(CATEGORIES).map(k => {
+      const val = trip.decided[k];
+      const cls = val ? "chip done" : (k === deciding ? "chip active" : "chip");
+      return `<span class="${cls}">${val ? "✓ " : "○ "}${SHORT[k]}${val ? ": " + esc(val) : ""}</span>`;
+    }).join("");
+  }
+
+  // ---------- Screen 1: what do you know? ----------
+  function showKnowns() {
+    deciding = null;
+    renderChips();
+    const fields = Object.entries(CATEGORIES).map(([k, label]) => `
+      <label class="field">${esc(label)}
+        <input type="text" id="known-${k}" value="${esc(trip.decided[k] || "")}" placeholder="Leave blank if you don't know yet" />
+      </label>`).join("");
+    const radios = Object.entries(CATEGORIES).map(([k]) => `
+      <label><input type="radio" name="decide" value="${k}" />${SHORT[k]}</label>`).join("");
+
+    $("screen").innerHTML = `
+      <div class="panel">
+        <h2>What do you already know?</h2>
+        <p class="sub">Fill in anything you've already settled. Leave the rest blank.</p>
+        <label class="field">Leaving from
+          <input type="text" id="origin" value="${esc(trip.origin)}" placeholder="e.g. New York" />
+        </label>
+        ${fields}
+        <label class="field">Anything else?
+          <input type="text" id="notes" value="${esc(trip.notes)}" placeholder="e.g. first time backpacking, traveling solo" />
+        </label>
+
+        <h2 style="margin-top:24px">What do you want to decide first?</h2>
+        <p class="sub">Pick one of the things you left blank.</p>
+        <div class="radios" id="radios">${radios}</div>
+
+        <div class="actions"><button class="btn" onclick="submitKnowns()">Show me options →</button></div>
+      </div>`;
+  }
+
+  function submitKnowns() {
+    trip.origin = $("origin").value.trim();
+    trip.notes = $("notes").value.trim();
+    trip.decided = {};
+    for (const k of Object.keys(CATEGORIES)) {
+      const v = $("known-" + k).value.trim();
+      if (v) trip.decided[k] = v;
+    }
+    const picked = document.querySelector('input[name="decide"]:checked');
+    if (!picked) return showError(new Error("Pick what you want to decide first."));
+    if (trip.decided[picked.value]) return showError(new Error(`You already filled in ${SHORT[picked.value]}. Clear it or pick something you haven't decided.`));
+    getOptions(picked.value);
+  }
+
+  // ---------- Screen 2: options for one decision ----------
+  async function getOptions(category) {
+    deciding = category;
+    renderChips();
+    loading(`Finding options for ${SHORT[category]}…`);
+    try {
+      const data = await callApi("/api/options", { trip, decide: category });
+      options = data.options || [];
+      showOptions();
+    } catch (err) { showError(err, showNext); }
+  }
+
+  function showOptions() {
+    const cards = options.map((o, i) => `
+      <div class="card" id="card-${i}">
+        <div class="card-head">
+          <input type="checkbox" class="pick" data-i="${i}" onchange="updateCompare()" />
+          <div><h3>${esc(o.name)}</h3><div class="cost">${esc(o.estimated_cost)}</div></div>
+        </div>
+        <div>${esc(o.summary)}</div>
+        <div><div class="section-label">Why it fits you</div>${esc(o.why_it_fits)}</div>
+        <div class="warn"><strong>⚠ Watch out for:</strong> ${esc(o.watch_out)}</div>
+        <button class="btn btn-secondary" onclick="lockIn(${JSON.stringify(o.name).replace(/"/g, "&quot;")})">Lock this in</button>
+      </div>`).join("");
+
+    $("screen").innerHTML = `
+      <div class="panel" style="margin-bottom:16px">
+        <h2>Your options for ${esc(CATEGORIES[deciding])}</h2>
+        <p class="sub" style="margin:0">Lock one in, or check 2–3 to compare the whole trip each would lead to.</p>
+      </div>
+      <div class="cards">${cards}</div>
+      <div class="actions">
+        <span id="compare-hint" class="sub" style="margin:0">Check 2–3 options</span>
+        <button class="btn" id="compare-btn" disabled onclick="compare()">Compare the full picture →</button>
+      </div>`;
+  }
+
+  function checkedOptions() {
+    return [...document.querySelectorAll(".pick:checked")].map(el => options[+el.dataset.i].name);
+  }
+
+  function updateCompare() {
+    document.querySelectorAll(".pick").forEach(el => $("card-" + el.dataset.i).classList.toggle("checked", el.checked));
+    const n = checkedOptions().length;
+    $("compare-btn").disabled = n < 2 || n > 3;
+    $("compare-hint").textContent = n > 3 ? "Pick at most 3" : `${n} selected`;
+  }
+
+  // ---------- Screen 3: the full picture ----------
+  async function compare() {
+    const picked = checkedOptions();
+    loading(`Looking ahead at the whole trip for ${picked.join(" vs. ")}…`);
+    try {
+      const data = await callApi("/api/compare", { trip, decide: deciding, options: picked });
+      showCompare(data, picked);
+    } catch (err) { showError(err, showOptions); }
+  }
+
+  function showCompare(data, picked) {
+    const cols = picked;  // always use the user's exact option names as column headers
+    const head = `<tr><th></th>${cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr>`;
+    const rows = (data.rows || []).map(r => `
+      <tr class="${/watch/i.test(r.label) ? "warn-row" : ""}">
+        <td>${/watch/i.test(r.label) ? "⚠ " : ""}${esc(r.label)}</td>
+        ${(r.values || []).map(v => `<td>${esc(v)}</td>`).join("")}
+      </tr>`).join("");
+    const lockButtons = picked.map(name =>
+      `<button class="btn" onclick="lockIn(${JSON.stringify(name).replace(/"/g, "&quot;")})">Lock ${esc(name)}</button>`).join("");
+
+    $("screen").innerHTML = `
+      <div class="panel">
+        <h2>The full picture</h2>
+        <p class="sub">What the whole trip could look like with each choice.</p>
+        <table>${head}${rows}</table>
+        <div class="tradeoff"><strong>The trade-off:</strong> ${esc(data.tradeoff)}</div>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="showOptions()">← Back to options</button>
+          ${lockButtons}
+        </div>
+      </div>`;
+  }
+
+  // ---------- Lock a decision, then Screen 4: what's next? ----------
+  function lockIn(name) {
+    trip.decided[deciding] = name;
+    deciding = null;
+    showNext();
+  }
+
+  async function showNext() {
+    renderChips();
+    if (openCategories().length === 0) return showDone();
+    loading("Figuring out what to decide next…");
+    let suggestions = [];
+    try {
+      suggestions = (await callApi("/api/next", { trip })).suggestions || [];
+    } catch (err) { $("error").innerHTML = `<div class="error">${esc(err.message)}</div>`; }
+
+    // Show AI-ranked suggestions first, then any open categories the AI missed.
+    const ranked = suggestions.filter(s => CATEGORIES[s.category] && !trip.decided[s.category]);
+    for (const k of openCategories()) {
+      if (!ranked.some(s => s.category === k)) ranked.push({ category: k, reason: "" });
+    }
+    const items = ranked.map((s, i) => `
+      <div class="next-item ${i === 0 ? "top" : ""}">
+        <div><strong>${i === 0 ? "★ " : ""}${esc(CATEGORIES[s.category])}</strong>
+          <span class="sub" style="margin:0">${esc(s.reason)}</span></div>
+        <button class="btn ${i === 0 ? "" : "btn-secondary"}" onclick="getOptions('${s.category}')">Decide</button>
+      </div>`).join("");
+
+    $("screen").innerHTML = `
+      <div class="panel">
+        <h2>What should you decide next?</h2>
+        <p class="sub">Suggested order. You make the call.</p>
+        ${items}
+        <div class="actions"><button class="link-btn" onclick="showKnowns()">Edit what I know</button></div>
+      </div>`;
+  }
+
+  function showDone() {
+    const rows = Object.entries(CATEGORIES).map(([k, label]) =>
+      `<tr><td>${esc(label)}</td><td>${esc(trip.decided[k])}</td></tr>`).join("");
+    $("screen").innerHTML = `
+      <div class="panel">
+        <h2>Your trip is planned 🎉</h2>
+        <p class="sub">Every decision is locked in.</p>
+        <table>${trip.origin ? `<tr><td>Leaving from</td><td>${esc(trip.origin)}</td></tr>` : ""}${rows}</table>
+        <div class="actions"><button class="btn btn-secondary" onclick="showKnowns()">Edit</button></div>
+      </div>`;
+  }
+
+  function startOver() {
+    trip = { origin: "", notes: "", decided: {} };
+    showKnowns();
+  }
+
+  showKnowns();
+</script>
+</body>
+</html>

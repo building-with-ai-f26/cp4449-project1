@@ -3,15 +3,15 @@
 > Give this file to your coding agent and check that it is using these instructions. Keep the stack, commands, and ground rules current.
 
 ## 1. Project Overview
-- **What this repo builds:** [1–2 sentence summary]
+- **What this repo builds:** Nextstop, a layered trip planner. You enter what you know, pick one decision, and AI suggests options with trade-offs and "watch out for" warnings, compares the full trip for a shortlist, and suggests what to decide next (the user always chooses).
 - **Primary user & core workflow:** [See the living PRD in `docs/index.html`]
-- **Tech stack:** [e.g., Python 3.12 / FastAPI / Next.js / SQLite / OpenRouter API]
+- **Tech stack:** Python 3.9+ / Flask / vanilla HTML+JS (`templates/index.html`) / OpenRouter API (default model `anthropic/claude-sonnet-5.5`). Trip state lives in the browser; no database.
 
 ## 2. Commands
-- **Install dependencies:** `[e.g., npm install / uv sync]`
-- **Run locally:** `[e.g., npm run dev]`
-- **Run deterministic tests:** `[e.g., pytest / npm test]`
-- **Run model evals:** `[e.g., python tests/eval.py]`
+- **Install dependencies:** `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then `cp .env.example .env` and add your OpenRouter key
+- **Run locally:** `.venv/bin/python app.py`, then open http://localhost:5050
+- **Run deterministic tests:** `.venv/bin/python -m unittest discover tests`
+- **Run model evals:** Not yet (planned for Build 4)
 
 ## 3. Non-Negotiable Engineering Rules
 1. **Plan before coding:** Before touching multiple files, propose a brief plan and wait for approval.
