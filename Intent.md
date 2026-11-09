@@ -35,6 +35,19 @@ Use this as a scratchpad if helpful. Publish the required PRD and Build 1 log on
 
 **Riskiest assumption:** AI-estimated costs, flights, and travel times are accurate enough to trust when comparing options. Without real data they may be wrong — the Build 3 "deal-checking agent" tests this.
 
+### Why this needs AI (not just "faster")
+Things a person can't realistically do by hand:
+
+1. **"Watch out for" — what you didn't know to ask.** Flags hidden issues before you hit them: holidays that spike prices (e.g., Semana Santa in Antigua), tight connections at delay-prone airports, rainy season, long layovers that "save" money (my Lisbon mistake). **Included in the Build 1 prototype** on every option and comparison.
+2. **Explore hundreds of combinations.** Checks destination × dates × routes × lodging at once and surfaces what-ifs ("shift 2 days and save $280", "fly into Liberia instead of San José"). Powers the full-picture comparison.
+3. **Read everything for my concerns.** Reads thousands of reviews (in any language) to answer my questions — quiet? walkable? safe for solo travelers?
+4. **Learn my taste.** Remembers I value total travel time over saving $200, what "moderate hiking" means for me, my vibe — so suggestions improve over time.
+5. **Balance a whole group (later).** Weighs up to 15 people's budgets, dates, and dealbreakers fairly, and explains who gives up what.
+
+**Positioning:** Travel AI is crowded (Mindtrip, Layla, Wanderlog, ChatGPT). Nextstop's edge is the approach — layered, I decide, trade-offs + full picture + "watch out for" — and the structure (remembers locked decisions, side-by-side comparisons, guides the next step) so I'm not managing a long back-and-forth chat.
+
+**Agent vision (Build 3+):** An agent searches real sources — flights, hotels, Airbnb, Vrbo — to replace AI estimates with real prices and connections. Need to confirm which data sources allow automated access; some sites restrict it.
+
 ## 4. Rough Local Prototype
 *What did you spike this week to test the core idea, and what did you learn from throwing it at the problem?*
 
