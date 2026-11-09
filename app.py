@@ -124,13 +124,21 @@ def options():
 
 They want to decide: {decide}
 
-Suggest 3 strong options (4 at most) for this one decision. Return JSON:
+Suggest 3 strong options (4 at most) for this one decision. Keep every bullet short (under ~15 words).
+Return JSON:
 {{"options": [{{
   "name": "short option name",
-  "estimated_cost": "~$X total (or how this option affects cost)",
-  "summary": "one line describing the option",
-  "why_it_fits": "1-2 sentences tied to what the traveler said",
-  "watch_out": "one specific non-obvious risk"
+  "estimated_cost": "~$X-Y total (just the range)",
+  "cost_breakdown": ["Flights ~$X", "Lodging ~$X (N nights at ~$X)", "Food ~$X", "..."],
+  "trip_summary": [
+    "Getting there: route and travel time",
+    "Highlights: 2-3 specific places or hikes",
+    "Where to stay: area and type",
+    "A typical day: what you'd actually do",
+    "Best time: within their dates if known"
+  ],
+  "why_it_fits": ["2-3 bullets, each tied to something the traveler said"],
+  "watch_out": ["1-2 specific non-obvious risks"]
 }}]}}"""
     return run(prompt)
 

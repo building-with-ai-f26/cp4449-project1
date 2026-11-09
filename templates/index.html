@@ -56,6 +56,9 @@
     .section-label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 2px; }
     .warn { background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
     .card .btn { margin-top: auto; }
+    .bullets { margin: 2px 0 0; padding-left: 18px; font-size: 14px; }
+    .bullets li { margin-bottom: 3px; }
+    .warn .bullets { margin-top: 4px; }
 
     /* Compare table */
     table { width: 100%; border-collapse: collapse; margin-top: 8px; }
@@ -110,6 +113,13 @@
   // ---------- helpers ----------
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // Render an AI field as a bullet list (accepts a list or a single string).
+  const list = (items) => {
+    const arr = (Array.isArray(items) ? items : [items]).filter(Boolean);
+    return `<ul class="bullets">${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  };
+  const bullets = (label, items) => items && items.length
+    ? `<div><div class="section-label">${esc(label)}</div>${list(items)}</div>` : "";
   const openCategories = () => Object.keys(CATEGORIES).filter(k => !trip.decided[k]);
 
   async function callApi(path, body) {
@@ -201,9 +211,10 @@
           <input type="checkbox" class="pick" data-i="${i}" onchange="updateCompare()" />
           <div><h3>${esc(o.name)}</h3><div class="cost">${esc(o.estimated_cost)}</div></div>
         </div>
-        <div>${esc(o.summary)}</div>
-        <div><div class="section-label">Why it fits you</div>${esc(o.why_it_fits)}</div>
-        <div class="warn"><strong>⚠ Watch out for:</strong> ${esc(o.watch_out)}</div>
+        ${bullets("Cost breakdown", o.cost_breakdown)}
+        ${bullets("Trip at a glance", o.trip_summary || o.summary)}
+        ${bullets("Why it fits you", o.why_it_fits)}
+        <div class="warn"><strong>⚠ Watch out for</strong>${list(o.watch_out)}</div>
         <button class="btn btn-secondary" onclick="lockIn(${JSON.stringify(o.name).replace(/"/g, "&quot;")})">Lock this in</button>
       </div>`).join("");
 

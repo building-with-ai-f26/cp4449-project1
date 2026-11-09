@@ -133,6 +133,12 @@
       padding-top: 0;
       margin-top: 0;
     }
+    .shot {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin: 4px 0 16px;
+    }
     .meta {
       font-size: 13px;
       color: var(--muted);
@@ -158,11 +164,18 @@
       <h2>Product Showcase (Prototype / Live App / 2-Min Video)</h2>
       <p>
         <strong>Current Status:</strong> Build 1: local prototype<br />
-        <strong>Demo:</strong> [Add a screenshot or GIF now; add the live cloud app URL in Build 5.]
+        <strong>Demo:</strong> Local prototype screenshots below. Trip: from New York, hiking and lakes, $1,000, ~10 days, mid-April. Cloud app link and 2-minute video come in Build 5.
       </p>
-      <p class="meta">
-        Ask your coding agent to embed a screenshot or GIF of your local prototype for Build 1. Keep this evidence current, then add your cloud app link and two-minute video in Build 5.
-      </p>
+      <h3>Step 1 · Enter what you know, and pick what to decide first</h3>
+      <img class="shot" src="images/step1-knowns.png" alt="Nextstop form: known trip details filled in, with Where selected as the first decision" />
+      <h3>Step 2 · AI options with cost breakdown, trip at a glance, why it fits, and watch-out warnings</h3>
+      <img class="shot" src="images/step2-options.png" alt="Three destination option cards: Asheville, Lake George, and Lake Chapala, each with cost breakdown and warnings" />
+      <h3>Step 3 · Lock it in, then the AI suggests what to decide next (you choose)</h3>
+      <img class="shot" src="images/step3-next.png" alt="Where locked as Lake Chapala; suggested next decisions are Transportation, then Accommodation, citing Semana Santa fares" />
+      <h3>Step 4 · Repeat for each decision (here: Accommodation, after locking Transportation)</h3>
+      <img class="shot" src="images/step4-repeat.png" alt="Accommodation options for Lake Chapala: Ajijic hostel base, private casita, or Guadalajara hostel base, each with costs and warnings" />
+      <h3>Step 5 · Every decision locked: the trip is planned</h3>
+      <img class="shot" src="images/step5-planned.png" alt="Trip summary table showing all seven decisions locked for a Lake Chapala trip from New York" />
     </section>
 
     <!-- LIVING PRD (Updated every week!) -->
@@ -197,17 +210,17 @@
       <p><strong>Positioning:</strong> Travel AI is crowded (Mindtrip, Layla, Wanderlog, ChatGPT). Nextstop's edge is the approach: layered, you decide, with trade-offs, the full picture, and "watch out for" warnings. It also has structure: it remembers your locked decisions, shows side-by-side comparisons, and guides your next step, so you aren't managing a long back-and-forth chat.</p>
       <p><strong>Agent vision (Build 3+):</strong> An agent searches real sources (flights, hotels, Airbnb, Vrbo) to replace AI estimates with real prices and connections.</p>
       <p><strong>What I learned testing it:</strong> I had an agent search Airbnb, Vrbo, and hotel sites and report back. It worked, but these sites' terms of service prohibit bots and scrapers, and automated searching can get accounts flagged. So Nextstop will use <em>official data sources</em> (partner programs and flight-data APIs) instead of scraping. It will never log in to, book from, or message from a user's travel accounts.</p>
-      <p><strong>Simple Architecture:</strong> [User Input] → [Your App / Server] → [AI Model / Tool] → [Output]</p>
+      <p><strong>Simple Architecture:</strong> Browser page (your knowns and locked decisions) → Python/Flask server (keeps the API key private) → Claude Sonnet 5.5 via OpenRouter (options, full-picture comparison, next-decision ranking) → option cards, comparison table, and suggested next step. Currently all AI estimates; real flight and lodging data planned for Build 3.</p>
 
       <h3>4. Unit Economics & Analytics Snapshot (Updated Weekly)</h3>
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">Cumulative Build Spend</div>
-          <div class="stat-value">[Record actual spend]</div>
+          <div class="stat-value">$0.51 (API)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
-          <div class="stat-value">[Not yet estimated]</div>
+          <div class="stat-value">~$0.05 per decision</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">User Evidence (Analytics from Build 2)</div>
@@ -228,10 +241,10 @@
       <div class="log-entry">
         <h3>Build 1 · Intent.md & Throwaway Prototype (Due Nov 9)</h3>
         <ul>
-          <li><strong>What shipped:</strong> [What you actually built; link your local prototype screenshot or GIF above.]</li>
-          <li><strong>Things learned with AI:</strong> [What you learned from AI practice and Terminus Episodes 1 and 2.]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
+          <li><strong>What shipped:</strong> PRD v1 and a working local prototype (Python/Flask + Claude Sonnet 5.5 via OpenRouter). You enter your knowns and pick a first decision. The AI suggests options with "why it fits you" and "⚠ watch out for" warnings, compares the full trip for a 2–3 option shortlist with the real trade-off, and suggests what to decide next (you choose). Tested by replaying my real Guatemala trip and a mid-April hiking-and-lakes trip. Screenshots above.</li>
+          <li><strong>Things learned with AI:</strong> Started from my own hand-drawn workflow of how I actually planned Guatemala, which turned "a travel app" into a layered, one-decision-at-a-time planner. Set up a Python virtual environment, kept my API key in a git-ignored <code>.env</code>, and learned that a key's spending limit isn't the same as having credits (my first calls failed with "402 Payment Required"). Terminus Episodes 1 &amp; 2 were a fun refresher. I've used the terminal a lot because of my background, so the game mostly reinforced commands I already knew.</li>
+          <li><strong>What broke / changed in PRD:</strong> (1) The compare step kept returning broken JSON. The model's hidden "thinking" was using up the token limit and cutting replies off mid-answer. Fixed with low reasoning effort and a higher limit (3/3 passes after). (2) "What's next" lost its reasons because the AI returned labels instead of keys. Fixed, with unit tests. (3) Option names containing commas split into extra columns. Fixed. (4) <em>Still open:</em> option quality is inconsistent. For "cheap," it sometimes ranks Iceland first, which is exactly my riskiest assumption about trusting AI estimates. PRD change: I tested having an agent search Airbnb/Vrbo/hotel sites. It worked, but it breaks their terms of service, so Nextstop will use official data sources instead.</li>
+          <li><strong>Cost & time this week:</strong> $0.51 (OpenRouter API) · ~3 hours</li>
         </ul>
       </div>
 
