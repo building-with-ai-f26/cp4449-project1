@@ -106,7 +106,8 @@
                   transport: "Transport", stay: "Stay", activities: "Activities" };
 
   // The whole trip lives here in the browser. The server never stores it.
-  let trip = { origin: "", notes: "", decided: {} };
+  // prefs = what the traveler wants going into each decision, e.g. prefs.stay = "quiet, kitchen".
+  let trip = { origin: "", notes: "", decided: {}, prefs: {} };
   let deciding = null;   // category currently being decided
   let options = [];      // options returned for the current decision
 
@@ -143,7 +144,9 @@
     $("chips").innerHTML = Object.keys(CATEGORIES).map(k => {
       const val = trip.decided[k];
       const cls = val ? "chip done" : (k === deciding ? "chip active" : "chip");
-      return `<span class="${cls}">${val ? "✓ " : "○ "}${SHORT[k]}${val ? ": " + esc(val) : ""}</span>`;
+      // Undecided categories show the preferences you gave, so you can see what the AI was told.
+      const pref = !val && trip.prefs[k] ? ` · wants: ${esc(trip.prefs[k])}` : "";
+      return `<span class="${cls}">${val ? "✓ " : "○ "}${SHORT[k]}${val ? ": " + esc(val) : ""}${pref}</span>`;
     }).join("");
   }
 
@@ -189,7 +192,46 @@
     const picked = document.querySelector('input[name="decide"]:checked');
     if (!picked) return showError(new Error("Pick what you want to decide first."));
     if (trip.decided[picked.value]) return showError(new Error(`You already filled in ${SHORT[picked.value]}. Clear it or pick something you haven't decided.`));
-    getOptions(picked.value);
+    showPrefs(picked.value);
+  }
+
+  // ---------- Screen 1b: preferences going into this one decision ----------
+  const PREF_EXAMPLES = {
+    where: "e.g. warm, not too touristy, good hiking, under 6 hours of flying",
+    when: "e.g. avoid rainy season and holidays, can only take off in spring",
+    length: "e.g. at most 10 days, don't want to use more than 5 PTO days",
+    budget: "e.g. under $2,000 total, happy to spend more on lodging than food",
+    transport: "e.g. nonstop if possible, no red-eyes, OK renting a car",
+    stay: "e.g. quiet area, kitchen, walkable, under $80/night",
+    activities: "e.g. one big hike, a lake day, no tours with big groups",
+  };
+
+  function showPrefs(category) {
+    deciding = category;
+    renderChips();
+    $("error").innerHTML = "";
+    $("screen").innerHTML = `
+      <div class="panel">
+        <h2>Deciding: ${esc(CATEGORIES[category])}</h2>
+        <p class="sub">Any preferences going into this decision? The AI will only suggest options that respect them.</p>
+        <textarea id="prefs" rows="3" placeholder="${esc(PREF_EXAMPLES[category] || "")}">${esc(trip.prefs[category] || "")}</textarea>
+        <div class="actions">
+          <button class="link-btn" onclick="skipPrefs()">Skip</button>
+          <button class="btn" onclick="submitPrefs()">Show me options →</button>
+        </div>
+      </div>`;
+    $("prefs").focus();
+  }
+
+  function submitPrefs() {
+    const text = $("prefs").value.trim();
+    if (text) trip.prefs[deciding] = text; else delete trip.prefs[deciding];
+    getOptions(deciding);
+  }
+
+  function skipPrefs() {
+    delete trip.prefs[deciding];
+    getOptions(deciding);
   }
 
   // ---------- Screen 2: options for one decision ----------
@@ -300,7 +342,7 @@
       <div class="next-item ${i === 0 ? "top" : ""}">
         <div><strong>${i === 0 ? "★ " : ""}${esc(CATEGORIES[s.category])}</strong>
           <span class="sub" style="margin:0">${esc(s.reason)}</span></div>
-        <button class="btn ${i === 0 ? "" : "btn-secondary"}" onclick="getOptions('${s.category}')">Decide</button>
+        <button class="btn ${i === 0 ? "" : "btn-secondary"}" onclick="showPrefs('${s.category}')">Decide</button>
       </div>`).join("");
 
     $("screen").innerHTML = `
@@ -325,7 +367,7 @@
   }
 
   function startOver() {
-    trip = { origin: "", notes: "", decided: {} };
+    trip = { origin: "", notes: "", decided: {}, prefs: {} };
     showKnowns();
   }
 

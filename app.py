@@ -52,6 +52,11 @@ def describe_trip(trip):
         value = (trip.get("decided") or {}).get(key)
         if value:
             lines.append(f"- {label}: {value}")
+    # Preferences the traveler gave going into a specific decision (e.g. "quiet, kitchen" for Accommodation).
+    for key, label in CATEGORIES.items():
+        pref = ((trip.get("prefs") or {}).get(key) or "").strip()
+        if pref:
+            lines.append(f"- Preferences for {label}: {pref}")
     if trip.get("notes"):
         lines.append(f"- Other notes: {trip['notes']}")
     return "\n".join(lines) or "- Nothing yet"
@@ -123,6 +128,7 @@ def options():
 {describe_trip(body["trip"])}
 
 They want to decide: {decide}
+If they gave "Preferences for {decide}", every option must respect them, and "why_it_fits" should say how.
 
 Suggest 3 strong options (4 at most) for this one decision. Keep every bullet short (under ~15 words).
 Return JSON:

@@ -2,7 +2,25 @@
 
 import unittest
 
-from app import to_category_key
+from app import describe_trip, to_category_key
+
+
+class DescribeTripTest(unittest.TestCase):
+    """Per-decision preferences must reach the AI prompt."""
+
+    def test_preferences_are_included(self):
+        trip = {"decided": {"where": "Guatemala"}, "prefs": {"stay": "quiet area, kitchen"}}
+        text = describe_trip(trip)
+        self.assertIn("- Where (destination): Guatemala", text)
+        self.assertIn("- Preferences for Accommodation: quiet area, kitchen", text)
+
+    def test_blank_preferences_are_skipped(self):
+        trip = {"decided": {"where": "Guatemala"}, "prefs": {"stay": "   "}}
+        self.assertEqual(describe_trip(trip), "- Where (destination): Guatemala")
+
+    def test_trip_without_prefs_still_works(self):
+        # Older trip state (Build 1) has no "prefs" key at all.
+        self.assertEqual(describe_trip({"origin": "NYC", "decided": {}}), "- Leaving from: NYC")
 
 
 class CategoryKeyTest(unittest.TestCase):
