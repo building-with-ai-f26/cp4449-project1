@@ -116,7 +116,13 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return render_template("index.html", categories=CATEGORIES)
+    # PostHog analytics (optional). The phc_ key is public, but we still keep config in .env.
+    return render_template(
+        "index.html",
+        categories=CATEGORIES,
+        posthog_key=os.getenv("POSTHOG_KEY", ""),
+        posthog_host=os.getenv("POSTHOG_HOST", "https://us.i.posthog.com"),
+    )
 
 
 @app.post("/api/options")
