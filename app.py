@@ -223,4 +223,6 @@ def run(prompt):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5050)
+    # Debug mode shows an interactive debugger on errors. Never expose it on a shared link.
+    # Turn it on locally only:  FLASK_DEBUG=1 .venv/bin/python app.py
+    app.run(debug=os.getenv("FLASK_DEBUG") == "1", port=5050)
