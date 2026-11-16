@@ -163,13 +163,14 @@
         <a class="btn btn-secondary" href="#prd">Read the Living PRD</a>
         <a class="btn btn-secondary" href="#build-log">Weekly Build Log</a>
       </div>
+      <p class="meta">This page uses PostHog analytics: page views, clicks, and session recordings, so I can see how people use it.</p>
     </header>
 
     <!-- DEMO / SCREENSHOT / VIDEO SHOWCASE -->
     <section id="live-demo">
       <h2>Product Showcase (Prototype / Live App / 2-Min Video)</h2>
       <p>
-        <strong>Current Status:</strong> Build 1: local prototype<br />
+        <strong>Current Status:</strong> Build 2: smallest local version (per-decision preferences + PostHog analytics)<br />
         <strong>Demo:</strong> Local prototype screenshots below. Trip: from New York, hiking and lakes, $1,000, ~10 days, mid-April. Cloud app link and 2-minute video come in Build 5.
       </p>
       <h3>Step 1 · Enter what you know, and pick what to decide first</h3>
@@ -182,6 +183,12 @@
       <img class="shot" src="images/step4-repeat.png" alt="Accommodation options for Lake Chapala: Ajijic hostel base, private casita, or Guadalajara hostel base, each with costs and warnings" />
       <h3>Step 5 · Every decision locked: the trip is planned</h3>
       <img class="shot" src="images/step5-planned.png" alt="Trip summary table showing all seven decisions locked for a Lake Chapala trip from New York" />
+
+      <h3>New in Build 2 · Tell it your preferences before each decision</h3>
+      <p>Before the AI suggests options, you can say what you want going into that decision. Here: Accommodation for a 10-day Guatemala hiking trip, "quiet area, kitchen, near hiking trailheads, under $60/night."</p>
+      <img class="shot" src="images/build2-preferences.png" alt="Deciding: Accommodation screen with a preferences box filled in: quiet area, kitchen, near hiking trailheads, under $60/night" />
+      <p>The preferences stay on the trip chip, and every option respects them. All three options have kitchens and quiet locations near trails, with lodging at ~$30–50/night, under the $60 cap. (These prices are still AI estimates. Checking them is Build 3.)</p>
+      <img class="shot" src="images/build2-pref-options.png" alt="Three accommodation options in Guatemala: San Pedro La Laguna cabin, Antigua-outskirts apartment, and San Marcos eco-cabin, each with lodging under $60 per night" />
     </section>
 
     <!-- LIVING PRD (Updated every week!) -->
@@ -209,6 +216,7 @@
 
       <h3>3. How It Works Under the Hood & Riskiest Assumption (Week 2+)</h3>
       <p><strong>Riskiest Assumption:</strong> AI-estimated costs, flights, and travel times are accurate enough to trust when comparing options. Without real data they may be wrong, and the Build 3 "deal-checking agent" will test this.</p>
+      <p><strong>How Build 2 tests it (PRD v2):</strong> Trust has two parts: does the AI <em>follow</em> what I told it, and are its numbers <em>true</em>? Build 2 tests the first part. Before each decision you can now give preferences (e.g. Accommodation: "quiet area, kitchen, under $60/night"), and the AI must respect them. In a real run for Guatemala in mid-April, all 3 options met every preference and explained how ("kitchens ~$35–55/night, under your $60 cap"). The second part, whether "$35–55/night" is actually true, is still unchecked, and that is Build 3's job with real data. PostHog session replay also shows where people hesitate or drop off, which tells me whether they trust the options enough to lock one in.</p>
       <p><strong>Why this needs AI (not just "faster"):</strong></p>
       <ul>
         <li><strong>"Watch out for": what you didn't know to ask.</strong> It flags hidden issues before you hit them: holidays that spike prices (like Semana Santa in Antigua), tight connections at delay-prone airports, rainy season, and layovers that "save" money but cost hours. This is in the Build 1 prototype.</li>
@@ -220,27 +228,37 @@
       <p><strong>Positioning:</strong> Travel AI is crowded (Mindtrip, Layla, Wanderlog, ChatGPT). Nextstop's edge is the approach: layered, you decide, with trade-offs, the full picture, and "watch out for" warnings. It also has structure: it remembers your locked decisions, shows side-by-side comparisons, and guides your next step, so you aren't managing a long back-and-forth chat.</p>
       <p><strong>Agent vision (Build 3+):</strong> An agent searches real sources (flights, hotels, Airbnb, Vrbo) to replace AI estimates with real prices and connections.</p>
       <p><strong>What I learned testing it:</strong> I had an agent search Airbnb, Vrbo, and hotel sites and report back. It worked, but these sites' terms of service prohibit bots and scrapers, and automated searching can get accounts flagged. So Nextstop will use <em>official data sources</em> (partner programs and flight-data APIs) instead of scraping. It will never log in to, book from, or message from a user's travel accounts.</p>
-      <p><strong>Simple Architecture:</strong> Browser page (your knowns and locked decisions) → Python/Flask server (keeps the API key private) → Claude Sonnet 5.5 via OpenRouter (options, full-picture comparison, next-decision ranking) → option cards, comparison table, and suggested next step. Currently all AI estimates; real flight and lodging data planned for Build 3.</p>
+      <p><strong>How it works (Build 2):</strong></p>
+      <ol>
+        <li><strong>Browser page</strong> holds the whole trip: your knowns, locked decisions, and per-decision preferences. Nothing is stored on a server, and there is no database.</li>
+        <li>When you ask for options, the page sends the trip to the <strong>Python/Flask server</strong>, which keeps the OpenRouter API key private in a git-ignored <code>.env</code> file.</li>
+        <li>The server turns the trip into a prompt and calls <strong>Claude Sonnet 5.5 via OpenRouter</strong>. It has three jobs: options for one decision, a full-picture comparison for a shortlist, and ranking what to decide next.</li>
+        <li>The AI replies in JSON. The server cleans it up and retries once if it's broken, and the page renders option cards, a comparison table, or the next-step list.</li>
+        <li><strong>PostHog</strong> records pageviews, clicks, and session replays on the app and on this page.</li>
+      </ol>
+      <p>Currently all AI estimates; real flight and lodging data planned for Build 3.</p>
 
       <h3>4. Unit Economics & Analytics Snapshot (Updated Weekly)</h3>
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">Cumulative Build Spend</div>
-          <div class="stat-value">$0.51 (API)</div>
+          <div class="stat-value">$0.66 (API)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
-          <div class="stat-value">~$0.05 per decision</div>
+          <div class="stat-value">~$0.015 per options call · ~$0.02–0.05 per decision</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">User Evidence (Analytics from Build 2)</div>
-          <div class="stat-value">[Not yet measured]</div>
+          <div class="stat-value">PostHog verified Nov 15: 2 visitors · 7 pageviews · 4 sessions (all my own testing so far)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Sponsor Call (Week 6)</div>
           <div class="stat-value">TBD</div>
         </div>
       </div>
+      <p class="meta"><strong>Cost per run, explained:</strong> Claude Sonnet 5.5 on OpenRouter costs $2 per million input tokens and $10 per million output tokens. A measured options call used 770 input + 1,375 output tokens ≈ <strong>$0.015</strong> (a second run on Nov 15 cost $0.013 on my OpenRouter balance). One decision = options + (optional) compare + next, so about $0.02–0.05 (compare and next are estimated, not yet measured). A full trip of ~7 decisions is roughly <strong>$0.15–0.35</strong>. Hosting is $0 while it runs locally.</p>
+      <img class="shot" src="images/build2-posthog.png" alt="PostHog web analytics for the last 7 days: 2 visitors, 7 page views, 4 sessions, first traffic on Nov 15" />
     </section>
 
     <!-- WEEKLY BUILD LOG (Updated at least twice a week via Git commits) -->
@@ -261,9 +279,10 @@
       <div class="log-entry">
         <h3>Build 2 · Smallest Local Version & PostHog (Due Nov 16)</h3>
         <ul>
-          <li><strong>What shipped:</strong> [Local working slice, PostHog verified on this page and the local app, PRD v2, and local setup in AGENTS.md]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
+          <li><strong>What shipped:</strong> (1) <em>Per-decision preferences:</em> before each decision you can tell the AI what you want (e.g. "quiet, kitchen, under $60/night"). The preferences are saved on the trip and passed to the options, compare, and next-step prompts, with 3 new unit tests (6/6 pass). In a Guatemala test, all 3 accommodation options respected every preference (screenshots above). (2) <em>PostHog</em> on this Product Page and the local app: pageviews, autocapture clicks, and session replay. I confirmed events and replays reach PostHog from both pages. The local app reads its key from <code>.env</code> and loads no analytics if the key is blank. (3) <em>PRD v2:</em> how Build 2 tests the riskiest assumption, a step-by-step architecture, and measured cost per run. (4) <em>AGENTS.md:</em> exact install/run/test commands, environment variables, project structure, and the data flow for one action.</li>
+          <li><strong>Things learned with AI:</strong> Traced one action end to end: the browser holds the whole trip, sends it to Flask, <code>describe_trip()</code> turns it into prompt text, OpenRouter calls Claude, and the JSON reply is cleaned (with one retry) and rendered. The API key never leaves the server. Learned that Flask's debug mode lets anyone who reaches the server run code, so it is now off unless <code>FLASK_DEBUG=1</code>. Also learned that a PostHog <code>phc_</code> key is meant to be public, while an OpenRouter key is a secret.</li>
+          <li><strong>What broke / changed in PRD:</strong> (1) Debug mode was on by default from Build 1. That's a security hole, now fixed. (2) PRD change: I split my riskiest assumption into two parts, "does the AI follow what I told it?" and "are its numbers true?" Build 2 checks the first (it did, in my test). The second is still open, since prices like "$30–50/night" are AI estimates until Build 3 brings in real data.</li>
+          <li><strong>Cost & time this week:</strong> $0.15 (OpenRouter API; $0.66 cumulative) · ~1 hour</li>
         </ul>
       </div>
 
