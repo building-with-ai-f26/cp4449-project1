@@ -4,82 +4,128 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nextstop · Plan one decision at a time</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #f7f7f5; --card: #fff; --text: #111827; --muted: #6b7280;
-      --border: #e5e7eb; --accent: #1d63dc; --accent-soft: #eff6ff;
-      --warn-bg: #fff7ed; --warn-text: #9a3412; --done: #15803d; --done-bg: #f0fdf4;
+      --bg: #faf6f0; --card: #fffdf9; --text: #1f2a2e; --muted: #6b7570;
+      --border: #ece4d8; --accent: #0f766e; --accent-dark: #115e59; --accent-soft: #e6f4f1;
+      --sand: #f3ebdf; --warn-bg: #fff4e6; --warn-text: #9a3f12; --warn-border: #fbd9b4;
+      --done: #166534; --done-bg: #ecf7ee; --done-border: #c7e8cf;
+      --shadow: 0 1px 2px rgba(60, 40, 20, .05), 0 4px 16px rgba(60, 40, 20, .06);
+      --shadow-lift: 0 2px 4px rgba(60, 40, 20, .06), 0 10px 28px rgba(60, 40, 20, .10);
+      --radius: 18px;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-           background: var(--bg); color: var(--text); line-height: 1.5; }
-    .container { max-width: 1040px; margin: 0 auto; padding: 32px 24px 80px; }
-    header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; }
-    .logo { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+    body { margin: 0; font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+           background: var(--bg); color: var(--text); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 1080px; margin: 0 auto; padding: 28px 24px 80px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+    .logo { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
     .logo span { color: var(--accent); }
-    .link-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; text-decoration: underline; }
+    .logo .logo-mark { width: 34px; height: 34px; border-radius: 11px; background: var(--accent); color: #fff;
+                 display: grid; place-items: center; font-size: 17px; box-shadow: var(--shadow); color: #fff; }
+    .link-btn { background: none; border: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 14px;
+                font-weight: 600; text-decoration: underline; text-underline-offset: 3px; padding: 6px 4px; }
+    .link-btn:hover { color: var(--accent); }
 
     /* Trip progress bar */
-    .progress { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-                padding: 14px 18px; margin-bottom: 24px; }
-    .progress-title { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 8px; }
+    .progress { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+                padding: 16px 20px; margin-bottom: 22px; }
+    .progress-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 10px; }
     .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip { font-size: 13px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
-    .chip.done { background: var(--done-bg); border-color: #bbf7d0; color: var(--done); font-weight: 600; }
-    .chip.active { background: var(--accent-soft); border-color: #bfdbfe; color: var(--accent); font-weight: 600; }
+    .chip { font-size: 13.5px; padding: 6px 13px; border-radius: 999px; background: var(--sand); color: var(--muted);
+            border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; }
+    .chip.done { background: var(--done-bg); border-color: var(--done-border); color: var(--done); font-weight: 700; }
+    .chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); font-weight: 700; }
+    .chip .tag { font-weight: 600; opacity: .8; }
 
-    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; }
-    h2 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.01em; }
-    .sub { color: var(--muted); margin: 0 0 20px; }
-    label.field { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: center; margin-bottom: 10px; font-weight: 600; font-size: 14px; }
-    input[type=text], textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font: inherit; font-weight: 400; }
-    .radios { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
-    .radios label { border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; cursor: pointer; font-size: 14px; }
-    .radios input { margin-right: 6px; }
-    .radios label.disabled { opacity: .4; cursor: not-allowed; }
+    .panel { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 32px; }
+    h2 { margin: 0 0 4px; font-size: 24px; font-weight: 800; letter-spacing: -0.015em; }
+    .sub { color: var(--muted); margin: 0 0 22px; }
+    .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px 20px; margin-bottom: 8px; }
+    label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 14px; }
+    label.field .icon { margin-right: 4px; }
+    input[type=text], textarea { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 12px;
+                                 font: inherit; font-weight: 500; background: #fff; color: var(--text); transition: border-color .15s, box-shadow .15s; }
+    input[type=text]::placeholder, textarea::placeholder { color: #a8a29a; }
+    input[type=text]:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+    textarea { resize: vertical; }
+    .divider { border: none; border-top: 1px dashed var(--border); margin: 26px 0 22px; }
+    .radios { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 8px; }
+    .radios label { border: 1.5px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 16px; cursor: pointer;
+                    font-size: 14.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; }
+    .radios label:hover { border-color: var(--accent); }
+    .radios input { position: absolute; opacity: 0; pointer-events: none; }
+    .radios label:has(input:checked) { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .radios label:has(input:focus-visible) { box-shadow: 0 0 0 4px var(--accent-soft); }
 
-    .btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 18px;
-           font-weight: 600; font-size: 15px; cursor: pointer; }
+    .btn { background: var(--accent); color: #fff; border: none; border-radius: 999px; padding: 11px 22px;
+           font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; transition: background .15s, transform .1s, box-shadow .15s; }
+    .btn:hover:not(:disabled) { background: var(--accent-dark); box-shadow: var(--shadow); }
+    .btn:active:not(:disabled) { transform: translateY(1px); }
     .btn:disabled { opacity: .4; cursor: not-allowed; }
-    .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-    .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; align-items: center; }
+    .btn-secondary { background: #fff; color: var(--accent-dark); border: 1.5px solid var(--accent); }
+    .btn-secondary:hover:not(:disabled) { background: var(--accent-soft); }
+    .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 22px; align-items: center; flex-wrap: wrap; }
 
     /* Option cards */
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px;
-            display: flex; flex-direction: column; gap: 10px; }
-    .card.checked { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-    .card-head { display: flex; gap: 10px; align-items: flex-start; }
-    .card-head input { margin-top: 5px; width: 18px; height: 18px; }
-    .card h3 { margin: 0; font-size: 18px; }
-    .cost { font-weight: 700; color: var(--accent); }
-    .section-label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 2px; }
-    .warn { background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
-    .card .btn { margin-top: auto; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 18px; align-items: start; }
+    .card { background: var(--card); border: 2px solid transparent; border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
+            display: flex; flex-direction: column; gap: 12px; transition: box-shadow .15s, border-color .15s; }
+    .card:hover { box-shadow: var(--shadow-lift); }
+    .card.checked { border-color: var(--accent); }
+    .card-head { display: flex; gap: 12px; align-items: flex-start; }
+    .card-head input { margin-top: 6px; width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .card h3 { margin: 0 0 4px; font-size: 18px; font-weight: 800; line-height: 1.3; }
+    .cost { display: inline-block; font-weight: 800; color: var(--accent-dark); background: var(--accent-soft);
+            border-radius: 999px; padding: 3px 11px; font-size: 14.5px; }
+    .section-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 2px; }
+    .warn { background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-border); border-radius: 12px; padding: 11px 14px; font-size: 14px; }
+    .card .btn { margin-top: 4px; }
     .bullets { margin: 2px 0 0; padding-left: 18px; font-size: 14px; }
-    .bullets li { margin-bottom: 3px; }
+    .bullets li { margin-bottom: 4px; }
     .warn .bullets { margin-top: 4px; }
+    details.more { border-top: 1px solid var(--border); padding-top: 8px; }
+    details.more + details.more { border-top: none; padding-top: 0; }
+    details.more summary { cursor: pointer; list-style: none; font-size: 13px; font-weight: 800; text-transform: uppercase;
+                           letter-spacing: .07em; color: var(--accent-dark); padding: 4px 0; display: flex; align-items: center; gap: 6px; }
+    details.more summary::-webkit-details-marker { display: none; }
+    details.more summary::before { content: "▸"; transition: transform .15s; display: inline-block; }
+    details.more[open] summary::before { transform: rotate(90deg); }
+    details.more .bullets { margin-bottom: 6px; }
 
     /* Compare table */
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    th, td { text-align: left; vertical-align: top; padding: 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
-    th { font-size: 16px; }
-    td:first-child { font-weight: 600; color: var(--muted); width: 160px; }
+    .table-wrap { overflow-x: auto; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; vertical-align: top; padding: 13px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    th { font-size: 16px; font-weight: 800; background: var(--sand); }
+    th:first-child { border-top-left-radius: 12px; } th:last-child { border-top-right-radius: 12px; }
+    td:first-child { font-weight: 700; color: var(--muted); width: 160px; }
+    tr.warn-row td { background: var(--warn-bg); }
     tr.warn-row td:not(:first-child) { color: var(--warn-text); }
-    .tradeoff { background: var(--accent-soft); border-radius: 10px; padding: 14px 16px; margin-top: 16px; }
+    .tradeoff { background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 12px; padding: 15px 18px; margin-top: 18px; }
 
     /* Next decision list */
-    .next-item { display: flex; justify-content: space-between; align-items: center; gap: 16px;
-                 border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+    .next-item { display: flex; justify-content: space-between; align-items: center; gap: 16px; background: #fff;
+                 border: 1.5px solid var(--border); border-radius: 14px; padding: 15px 18px; margin-bottom: 10px; }
     .next-item.top { border-color: var(--accent); background: var(--accent-soft); }
-    .next-item strong { display: block; }
+    .next-item strong { display: block; font-size: 16px; }
+    .next-item .badge { display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
+                        background: var(--accent); color: #fff; border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 2px; }
 
-    .loading { text-align: center; padding: 48px; color: var(--muted); }
-    .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent);
-               border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+    .loading { text-align: center; padding: 56px; color: var(--muted); font-weight: 600; }
+    .spinner { width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: var(--accent);
+               border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .error { background: #fef2f2; color: #991b1b; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
-    .note { font-size: 12px; color: var(--muted); margin-top: 16px; }
+    .error { background: #fdecec; color: #991b1b; border: 1px solid #f5c2c2; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-weight: 600; }
+    .note { font-size: 12.5px; color: var(--muted); margin-top: 18px; text-align: center; }
+
+    @media (max-width: 600px) {
+      .container { padding: 20px 16px 60px; }
+      .panel { padding: 22px 18px; }
+      .next-item { flex-direction: column; align-items: stretch; }
+    }
   </style>
   {% if posthog_key %}
   <!-- PostHog analytics: pageviews, clicks (autocapture), and session replay. Key comes from .env. -->
@@ -92,7 +138,7 @@
 <body>
 <div class="container">
   <header>
-    <div class="logo">next<span>stop</span></div>
+    <div class="logo"><span class="logo-mark" aria-hidden="true">✈︎</span><div>next<span>stop</span></div></div>
     <button class="link-btn" onclick="startOver()">Start over</button>
   </header>
 
@@ -111,6 +157,9 @@
   const CATEGORIES = {{ categories | tojson }};
   const SHORT = { where: "Where", when: "When", length: "Length", budget: "Budget",
                   transport: "Transport", stay: "Stay", activities: "Activities" };
+  const ICON = { where: "📍", when: "🗓️", length: "⏳", budget: "💰",
+                 transport: "✈️", stay: "🛏️", activities: "🥾" };
+  const icon = (k) => `<span class="icon" aria-hidden="true">${ICON[k] || ""}</span>`;
 
   // The whole trip lives here in the browser. The server never stores it.
   // prefs = what the traveler wants going into each decision, e.g. prefs.stay = "quiet, kitchen".
@@ -128,7 +177,12 @@
   };
   const bullets = (label, items) => items && items.length
     ? `<div><div class="section-label">${esc(label)}</div>${list(items)}</div>` : "";
-  const openCategories = () => Object.keys(CATEGORIES).filter(k => !trip.decided[k]);
+  // A collapsible section on an option card (closed by default so 3 cards are easy to scan).
+  const more = (label, items) => {
+    const arr = (Array.isArray(items) ? items : [items]).filter(Boolean);
+    return arr.length ? `<details class="more"><summary>${esc(label)}</summary>${list(arr)}</details>` : "";
+  };
+  const openCategories =() => Object.keys(CATEGORIES).filter(k => !trip.decided[k]);
 
   async function callApi(path, body) {
     $("error").innerHTML = "";
@@ -152,8 +206,9 @@
       const val = trip.decided[k];
       const cls = val ? "chip done" : (k === deciding ? "chip active" : "chip");
       // Undecided categories show the preferences you gave, so you can see what the AI was told.
-      const pref = !val && trip.prefs[k] ? ` · wants: ${esc(trip.prefs[k])}` : "";
-      return `<span class="${cls}">${val ? "✓ " : "○ "}${SHORT[k]}${val ? ": " + esc(val) : ""}${pref}</span>`;
+      const pref = !val && trip.prefs[k] ? `<span class="tag">· wants: ${esc(trip.prefs[k])}</span>` : "";
+      const status = val ? "" : (k === deciding ? `<span class="tag">· deciding</span>` : "");
+      return `<span class="${cls}">${icon(k)}${SHORT[k]}${val ? ": " + esc(val) : ""}${status}${pref}</span>`;
     }).join("");
   }
 
@@ -162,25 +217,28 @@
     deciding = null;
     renderChips();
     const fields = Object.entries(CATEGORIES).map(([k, label]) => `
-      <label class="field">${esc(label)}
+      <label class="field"><span>${icon(k)}${esc(label)}</span>
         <input type="text" id="known-${k}" value="${esc(trip.decided[k] || "")}" placeholder="Leave blank if you don't know yet" />
       </label>`).join("");
     const radios = Object.entries(CATEGORIES).map(([k]) => `
-      <label><input type="radio" name="decide" value="${k}" />${SHORT[k]}</label>`).join("");
+      <label><input type="radio" name="decide" value="${k}" />${icon(k)}${SHORT[k]}</label>`).join("");
 
     $("screen").innerHTML = `
       <div class="panel">
         <h2>What do you already know?</h2>
         <p class="sub">Fill in anything you've already settled. Leave the rest blank.</p>
-        <label class="field">Leaving from
-          <input type="text" id="origin" value="${esc(trip.origin)}" placeholder="e.g. New York" />
-        </label>
-        ${fields}
-        <label class="field">Anything else?
-          <input type="text" id="notes" value="${esc(trip.notes)}" placeholder="e.g. first time backpacking, traveling solo" />
-        </label>
+        <div class="fields">
+          <label class="field"><span><span class="icon" aria-hidden="true">🏠</span>Leaving from</span>
+            <input type="text" id="origin" value="${esc(trip.origin)}" placeholder="e.g. New York" />
+          </label>
+          ${fields}
+          <label class="field"><span><span class="icon" aria-hidden="true">📝</span>Anything else?</span>
+            <input type="text" id="notes" value="${esc(trip.notes)}" placeholder="e.g. first time backpacking, traveling solo" />
+          </label>
+        </div>
 
-        <h2 style="margin-top:24px">What do you want to decide first?</h2>
+        <hr class="divider" />
+        <h2>What do you want to decide first?</h2>
         <p class="sub">Pick one of the things you left blank.</p>
         <div class="radios" id="radios">${radios}</div>
 
@@ -219,7 +277,7 @@
     $("error").innerHTML = "";
     $("screen").innerHTML = `
       <div class="panel">
-        <h2>Deciding: ${esc(CATEGORIES[category])}</h2>
+        <h2>${ICON[category] || ""} Deciding: ${esc(CATEGORIES[category])}</h2>
         <p class="sub">Any preferences going into this decision? The AI will only suggest options that respect them.</p>
         <textarea id="prefs" rows="3" placeholder="${esc(PREF_EXAMPLES[category] || "")}">${esc(trip.prefs[category] || "")}</textarea>
         <div class="actions">
@@ -260,16 +318,18 @@
           <input type="checkbox" class="pick" data-i="${i}" onchange="updateCompare()" />
           <div><h3>${esc(o.name)}</h3><div class="cost">${esc(o.estimated_cost)}</div></div>
         </div>
-        ${bullets("Cost breakdown", o.cost_breakdown)}
-        ${bullets("Trip at a glance", o.trip_summary || o.summary)}
         ${bullets("Why it fits you", o.why_it_fits)}
         <div class="warn"><strong>⚠ Watch out for</strong>${list(o.watch_out)}</div>
+        <div>
+          ${more("Cost breakdown", o.cost_breakdown)}
+          ${more("Trip at a glance", o.trip_summary || o.summary)}
+        </div>
         <button class="btn btn-secondary" onclick="lockIn(${JSON.stringify(o.name).replace(/"/g, "&quot;")})">Lock this in</button>
       </div>`).join("");
 
     $("screen").innerHTML = `
       <div class="panel" style="margin-bottom:16px">
-        <h2>Your options for ${esc(CATEGORIES[deciding])}</h2>
+        <h2>${ICON[deciding] || ""} Your options for ${esc(CATEGORIES[deciding])}</h2>
         <p class="sub" style="margin:0">Lock one in, or check 2–3 to compare the whole trip each would lead to.</p>
       </div>
       <div class="cards">${cards}</div>
@@ -315,7 +375,7 @@
       <div class="panel">
         <h2>The full picture</h2>
         <p class="sub">What the whole trip could look like with each choice.</p>
-        <table>${head}${rows}</table>
+        <div class="table-wrap"><table>${head}${rows}</table></div>
         <div class="tradeoff"><strong>The trade-off:</strong> ${esc(data.tradeoff)}</div>
         <div class="actions">
           <button class="btn btn-secondary" onclick="showOptions()">← Back to options</button>
@@ -347,7 +407,7 @@
     }
     const items = ranked.map((s, i) => `
       <div class="next-item ${i === 0 ? "top" : ""}">
-        <div><strong>${i === 0 ? "★ " : ""}${esc(CATEGORIES[s.category])}</strong>
+        <div><strong>${ICON[s.category] || ""} ${esc(CATEGORIES[s.category])}${i === 0 ? `<span class="badge">Suggested</span>` : ""}</strong>
           <span class="sub" style="margin:0">${esc(s.reason)}</span></div>
         <button class="btn ${i === 0 ? "" : "btn-secondary"}" onclick="showPrefs('${s.category}')">Decide</button>
       </div>`).join("");
@@ -363,12 +423,12 @@
 
   function showDone() {
     const rows = Object.entries(CATEGORIES).map(([k, label]) =>
-      `<tr><td>${esc(label)}</td><td>${esc(trip.decided[k])}</td></tr>`).join("");
+      `<tr><td>${ICON[k] || ""} ${esc(label)}</td><td>${esc(trip.decided[k])}</td></tr>`).join("");
     $("screen").innerHTML = `
       <div class="panel">
         <h2>Your trip is planned 🎉</h2>
         <p class="sub">Every decision is locked in.</p>
-        <table>${trip.origin ? `<tr><td>Leaving from</td><td>${esc(trip.origin)}</td></tr>` : ""}${rows}</table>
+        <div class="table-wrap"><table>${trip.origin ? `<tr><td>🏠 Leaving from</td><td>${esc(trip.origin)}</td></tr>` : ""}${rows}</table></div>
         <div class="actions"><button class="btn btn-secondary" onclick="showKnowns()">Edit</button></div>
       </div>`;
   }
