@@ -1,4 +1,4 @@
-"""Nextstop — Build 1 prototype.
+"""Nextstop — layered trip planner.
 
 A layered trip planner: the user enters what they know, picks one decision,
 and the AI suggests options, compares the full picture, and suggests what to
@@ -32,7 +32,12 @@ CATEGORIES = {
 
 SYSTEM_PROMPT = """You are Nextstop, a travel-planning advisor. You help the traveler make ONE decision at a time.
 Rules:
-- Respect everything the traveler already knows or has locked in. Never contradict it.
+- Respect everything the traveler has locked in. Never contradict it.
+- "Starting ideas (not decided yet)" are rough guidance, not final. Use them as a starting point.
+- Match the layer: options are only as specific as what's already LOCKED allows. Planning goes big to small:
+  destination first, then dates, then specific bookings. If Where isn't locked, When options are
+  time-of-year windows (e.g. "early April", "mid-April", "late April"), never specific dates. Likewise, no named
+  hotels, flights, or exact itineraries before the destination is locked.
 - Every option must genuinely fit their stated budget and activities. If they say "cheap", only suggest
   options that are actually low-cost for them. Order options from best fit to worst fit.
 - Be specific to THIS traveler: explain why an option fits what they said.
@@ -48,15 +53,37 @@ def describe_trip(trip):
     lines = []
     if trip.get("origin"):
         lines.append(f"- Leaving from: {trip['origin']}")
+    decided = trip.get("decided") or {}
+    prefs = trip.get("prefs") or {}
+    ideas = trip.get("ideas") or {}
+    # Locked-in decisions: fixed facts the AI must respect.
     for key, label in CATEGORIES.items():
-        value = (trip.get("decided") or {}).get(key)
+        value = decided.get(key)
         if value:
             lines.append(f"- {label}: {value}")
+    # Starting ideas from the first page (e.g. "mid-April"): guidance, not decisions yet.
+    # Skipped once the category is locked, or once preferences were given (that box is pre-filled from the idea).
+    for key, label in CATEGORIES.items():
+        idea = (ideas.get(key) or "").strip()
+        if idea and not decided.get(key) and not (prefs.get(key) or "").strip():
+            lines.append(f"- Starting idea for {label} (not decided yet): {idea}")
     # Preferences the traveler gave going into a specific decision (e.g. "quiet, kitchen" for Accommodation).
     for key, label in CATEGORIES.items():
-        pref = ((trip.get("prefs") or {}).get(key) or "").strip()
+        pref = (prefs.get(key) or "").strip()
         if pref:
             lines.append(f"- Preferences for {label}: {pref}")
+    # "Not quite right?" reruns: options already shown and turned down, and why. Dropped once the category is locked.
+    rejected = trip.get("rejected") or {}
+    for key, label in CATEGORIES.items():
+        r = rejected.get(key) or {}
+        if decided.get(key):
+            continue
+        names = [n.strip() for n in r.get("options") or [] if n and n.strip()]
+        feedback = [f.strip() for f in r.get("feedback") or [] if f and f.strip()]
+        if names:
+            lines.append(f"- Already ruled out for {label}: {'; '.join(names)}")
+        if feedback:
+            lines.append(f"- What they didn't like about earlier {label} options: {'; '.join(feedback)}")
     if trip.get("notes"):
         lines.append(f"- Other notes: {trip['notes']}")
     return "\n".join(lines) or "- Nothing yet"
@@ -135,6 +162,8 @@ def options():
 
 They want to decide: {decide}
 If they gave "Preferences for {decide}", every option must respect them, and "why_it_fits" should say how.
+Options must be distinct choices they could lock in at THIS layer (see "Match the layer"), not restatements of an idea.
+If options were "Already ruled out", do not suggest them again, and use what they didn't like to suggest genuinely different ones.
 
 Suggest 3 strong options (4 at most) for this one decision. Keep every bullet short (under ~15 words).
 Return JSON:
@@ -199,7 +228,8 @@ def next_decision():
 Still undecided: {open_list}
 
 Rank the undecided categories by what they should decide next, and why (e.g. what drives cost,
-what books up, what depends on what). Return JSON:
+what books up, what depends on what). Go big to small: the destination usually comes before dates, and dates
+before specific bookings, since the later layers depend on it. Return JSON:
 {{"suggestions": [{{"category": "the short key, e.g. \\"{open_keys[0]}\\"", "reason": "one sentence specific to this trip"}}]}}"""
     response = run(prompt)
     # The AI sometimes answers with the label ("When (dates...)") instead of the key ("when"). Map it back.

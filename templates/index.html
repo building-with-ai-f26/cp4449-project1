@@ -39,13 +39,14 @@
     .chip.done { background: var(--done-bg); border-color: var(--done-border); color: var(--done); font-weight: 700; }
     .chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); font-weight: 700; }
     .chip .tag { font-weight: 600; opacity: .8; }
+    .chip.idea { background: #fff; border: 1.5px dashed #d6c7b0; color: var(--text); }
 
     .panel { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 32px; }
     h2 { margin: 0 0 4px; font-size: 24px; font-weight: 800; letter-spacing: -0.015em; }
     .sub { color: var(--muted); margin: 0 0 22px; }
     .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px 20px; margin-bottom: 8px; }
-    label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 14px; }
-    label.field .icon { margin-right: 4px; }
+    .field { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 14px; }
+    .field .icon { margin-right: 4px; }
     input[type=text], textarea { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 12px;
                                  font: inherit; font-weight: 500; background: #fff; color: var(--text); transition: border-color .15s, box-shadow .15s; }
     input[type=text]::placeholder, textarea::placeholder { color: #a8a29a; }
@@ -59,6 +60,14 @@
     .radios input { position: absolute; opacity: 0; pointer-events: none; }
     .radios label:has(input:checked) { background: var(--accent); border-color: var(--accent); color: #fff; }
     .radios label:has(input:focus-visible) { box-shadow: 0 0 0 4px var(--accent-soft); }
+    .radios label:has(input:disabled) { opacity: .45; cursor: not-allowed; border-color: var(--border); }
+    .locked { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px;
+              border-radius: 12px; background: var(--done-bg); border: 1.5px solid var(--done-border); color: var(--done); font-weight: 700; }
+    .locked .link-btn { padding: 0; font-size: 13px; }
+    .retry-title { font-size: 16px; font-weight: 800; margin: 22px 0 2px; }
+    .retry-sub { margin-bottom: 10px; font-size: 14px; }
+    .retry-row { text-align: center; margin-top: 14px; }
+    .idea-hint { background: var(--sand); border-radius: 12px; padding: 10px 14px; margin: -8px 0 14px; font-size: 14px; }
 
     .btn { background: var(--accent); color: #fff; border: none; border-radius: 999px; padding: 11px 22px;
            font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; transition: background .15s, transform .1s, box-shadow .15s; }
@@ -162,8 +171,12 @@
   const icon = (k) => `<span class="icon" aria-hidden="true">${ICON[k] || ""}</span>`;
 
   // The whole trip lives here in the browser. The server never stores it.
-  // prefs = what the traveler wants going into each decision, e.g. prefs.stay = "quiet, kitchen".
-  let trip = { origin: "", notes: "", decided: {}, prefs: {} };
+  // ideas   = rough starting ideas from the first page, e.g. ideas.when = "mid-April" (not decided yet).
+  // decided = what the traveler has locked in, one decision at a time.
+  // prefs   = what the traveler wants going into each decision, e.g. prefs.stay = "quiet, kitchen".
+  // rejected = per decision, options you turned down with "Not quite right?" and why: { where: { options: [], feedback: [] } }.
+  const emptyTrip = () => ({ origin: "", notes: "", ideas: {}, decided: {}, prefs: {}, rejected: {} });
+  let trip = emptyTrip();
   let deciding = null;   // category currently being decided
   let options = [];      // options returned for the current decision
 
@@ -203,12 +216,15 @@
 
   function renderChips() {
     $("chips").innerHTML = Object.keys(CATEGORIES).map(k => {
+      // Three states: locked (green), being decided (teal), or just an idea so far (dashed).
       const val = trip.decided[k];
-      const cls = val ? "chip done" : (k === deciding ? "chip active" : "chip");
+      const idea = trip.ideas[k];
+      if (val) return `<span class="chip done" title="Locked in">${icon(k)}${SHORT[k]}: ${esc(val)} ✓</span>`;
       // Undecided categories show the preferences you gave, so you can see what the AI was told.
-      const pref = !val && trip.prefs[k] ? `<span class="tag">· wants: ${esc(trip.prefs[k])}</span>` : "";
-      const status = val ? "" : (k === deciding ? `<span class="tag">· deciding</span>` : "");
-      return `<span class="${cls}">${icon(k)}${SHORT[k]}${val ? ": " + esc(val) : ""}${status}${pref}</span>`;
+      const pref = trip.prefs[k] ? `<span class="tag">· wants: ${esc(trip.prefs[k])}</span>` : "";
+      if (k === deciding) return `<span class="chip active">${icon(k)}${SHORT[k]}<span class="tag">· deciding</span>${pref}</span>`;
+      if (idea) return `<span class="chip idea" title="Starting idea, not locked yet">${icon(k)}${SHORT[k]}<span class="tag">· idea: ${esc(idea)}</span></span>`;
+      return `<span class="chip">${icon(k)}${SHORT[k]}${pref}</span>`;
     }).join("");
   }
 
@@ -216,17 +232,21 @@
   function showKnowns() {
     deciding = null;
     renderChips();
-    const fields = Object.entries(CATEGORIES).map(([k, label]) => `
+    // Locked categories show their decision (with Unlock); the rest take a rough idea.
+    const fields = Object.entries(CATEGORIES).map(([k, label]) => trip.decided[k] ? `
+      <div class="field"><span>${icon(k)}${esc(label)}</span>
+        <div class="locked"><span>✓ ${esc(trip.decided[k])}</span><button class="link-btn" onclick="unlock('${k}')">Unlock</button></div>
+      </div>` : `
       <label class="field"><span>${icon(k)}${esc(label)}</span>
-        <input type="text" id="known-${k}" value="${esc(trip.decided[k] || "")}" placeholder="Leave blank if you don't know yet" />
+        <input type="text" id="known-${k}" value="${esc(trip.ideas[k] || "")}" placeholder="Any idea yet? Leave blank if not" />
       </label>`).join("");
     const radios = Object.entries(CATEGORIES).map(([k]) => `
-      <label><input type="radio" name="decide" value="${k}" />${icon(k)}${SHORT[k]}</label>`).join("");
+      <label><input type="radio" name="decide" value="${k}" ${trip.decided[k] ? "disabled" : ""} />${icon(k)}${SHORT[k]}</label>`).join("");
 
     $("screen").innerHTML = `
       <div class="panel">
-        <h2>What do you already know?</h2>
-        <p class="sub">Fill in anything you've already settled. Leave the rest blank.</p>
+        <h2>What are you thinking so far?</h2>
+        <p class="sub">Jot down rough ideas, like "mid-April" or "somewhere with volcanoes". Nothing is final yet: you'll lock in each part one decision at a time.</p>
         <div class="fields">
           <label class="field"><span><span class="icon" aria-hidden="true">🏠</span>Leaving from</span>
             <input type="text" id="origin" value="${esc(trip.origin)}" placeholder="e.g. New York" />
@@ -239,25 +259,38 @@
 
         <hr class="divider" />
         <h2>What do you want to decide first?</h2>
-        <p class="sub">Pick one of the things you left blank.</p>
+        <p class="sub">Pick any part you haven't locked in yet, even one you have an idea for.</p>
         <div class="radios" id="radios">${radios}</div>
 
         <div class="actions"><button class="btn" onclick="submitKnowns()">Show me options →</button></div>
       </div>`;
   }
 
-  function submitKnowns() {
+  // Save the first page's fields as ideas. Locked decisions are kept as they are.
+  function saveIdeas() {
     trip.origin = $("origin").value.trim();
     trip.notes = $("notes").value.trim();
-    trip.decided = {};
     for (const k of Object.keys(CATEGORIES)) {
-      const v = $("known-" + k).value.trim();
-      if (v) trip.decided[k] = v;
+      const input = $("known-" + k);
+      if (!input) continue;  // locked category: no input on the page
+      const v = input.value.trim();
+      if (v) trip.ideas[k] = v; else delete trip.ideas[k];
     }
+  }
+
+  function submitKnowns() {
+    saveIdeas();
     const picked = document.querySelector('input[name="decide"]:checked');
     if (!picked) return showError(new Error("Pick what you want to decide first."));
-    if (trip.decided[picked.value]) return showError(new Error(`You already filled in ${SHORT[picked.value]}. Clear it or pick something you haven't decided.`));
     showPrefs(picked.value);
+  }
+
+  // Unlocking turns the decision back into an idea, so you can decide it again.
+  function unlock(k) {
+    saveIdeas();
+    trip.ideas[k] = trip.decided[k];
+    delete trip.decided[k];
+    showKnowns();
   }
 
   // ---------- Screen 1b: preferences going into this one decision ----------
@@ -273,13 +306,20 @@
 
   function showPrefs(category) {
     deciding = category;
+    trip.rejected = trip.rejected || {};
+    const ruledOut = (trip.rejected[category] || {}).options || [];
     renderChips();
     $("error").innerHTML = "";
     $("screen").innerHTML = `
       <div class="panel">
         <h2>${ICON[category] || ""} Deciding: ${esc(CATEGORIES[category])}</h2>
         <p class="sub">Any preferences going into this decision? The AI will only suggest options that respect them.</p>
-        <textarea id="prefs" rows="3" placeholder="${esc(PREF_EXAMPLES[category] || "")}">${esc(trip.prefs[category] || "")}</textarea>
+        ${trip.ideas[category] ? `<div class="idea-hint">💡 Your starting idea: <strong>${esc(trip.ideas[category])}</strong>. It's filled in below, so edit or add to it.</div>` : ""}
+        <textarea id="prefs" rows="3" placeholder="${esc(PREF_EXAMPLES[category] || "")}">${esc(trip.prefs[category] || trip.ideas[category] || "")}</textarea>
+        ${ruledOut.length ? `
+          <h3 class="retry-title">What didn't you like about the last options?</h3>
+          <p class="sub retry-sub">Ruled out so far: ${ruledOut.map(esc).join(" · ")}. The AI won't suggest these again.</p>
+          <textarea id="feedback" rows="2" placeholder="e.g. too touristy, want somewhere I can hike without a guide"></textarea>` : ""}
         <div class="actions">
           <button class="link-btn" onclick="skipPrefs()">Skip</button>
           <button class="btn" onclick="submitPrefs()">Show me options →</button>
@@ -288,14 +328,29 @@
     $("prefs").focus();
   }
 
+  function saveFeedback() {
+    const box = $("feedback");
+    const text = box ? box.value.trim() : "";
+    if (text) trip.rejected[deciding].feedback = [...(trip.rejected[deciding].feedback || []), text];
+  }
+
   function submitPrefs() {
     const text = $("prefs").value.trim();
     if (text) trip.prefs[deciding] = text; else delete trip.prefs[deciding];
+    saveFeedback();
     getOptions(deciding);
+  }
+
+  // "Not quite right?": remember these options as ruled out, then go back to add details.
+  function retryOptions() {
+    const r = trip.rejected[deciding] = trip.rejected[deciding] || { options: [], feedback: [] };
+    for (const o of options) if (!r.options.includes(o.name)) r.options.push(o.name);
+    showPrefs(deciding);
   }
 
   function skipPrefs() {
     delete trip.prefs[deciding];
+    saveFeedback();
     getOptions(deciding);
   }
 
@@ -336,7 +391,8 @@
       <div class="actions">
         <span id="compare-hint" class="sub" style="margin:0">Check 2–3 options</span>
         <button class="btn" id="compare-btn" disabled onclick="compare()">Compare the full picture →</button>
-      </div>`;
+      </div>
+      <div class="retry-row"><button class="link-btn" onclick="retryOptions()">↻ Not quite right? Add details and try again</button></div>`;
   }
 
   function checkedOptions() {
@@ -387,6 +443,7 @@
   // ---------- Lock a decision, then Screen 4: what's next? ----------
   function lockIn(name) {
     trip.decided[deciding] = name;
+    delete (trip.rejected || {})[deciding];  // ruled-out list is only needed while deciding
     deciding = null;
     showNext();
   }
@@ -408,7 +465,7 @@
     const items = ranked.map((s, i) => `
       <div class="next-item ${i === 0 ? "top" : ""}">
         <div><strong>${ICON[s.category] || ""} ${esc(CATEGORIES[s.category])}${i === 0 ? `<span class="badge">Suggested</span>` : ""}</strong>
-          <span class="sub" style="margin:0">${esc(s.reason)}</span></div>
+          <span class="sub" style="margin:0">${trip.ideas[s.category] ? `💡 Your idea: ${esc(trip.ideas[s.category])}. ` : ""}${esc(s.reason)}</span></div>
         <button class="btn ${i === 0 ? "" : "btn-secondary"}" onclick="showPrefs('${s.category}')">Decide</button>
       </div>`).join("");
 
@@ -417,7 +474,7 @@
         <h2>What should you decide next?</h2>
         <p class="sub">Suggested order. You make the call.</p>
         ${items}
-        <div class="actions"><button class="link-btn" onclick="showKnowns()">Edit what I know</button></div>
+        <div class="actions"><button class="link-btn" onclick="showKnowns()">Edit ideas</button></div>
       </div>`;
   }
 
@@ -434,7 +491,7 @@
   }
 
   function startOver() {
-    trip = { origin: "", notes: "", decided: {}, prefs: {} };
+    trip = emptyTrip();
     showKnowns();
   }
 

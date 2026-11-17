@@ -23,6 +23,45 @@ class DescribeTripTest(unittest.TestCase):
         self.assertEqual(describe_trip({"origin": "NYC", "decided": {}}), "- Leaving from: NYC")
 
 
+class IdeasTest(unittest.TestCase):
+    """First-page answers are starting ideas (#1): the AI must see them as not decided yet."""
+
+    def test_idea_is_marked_not_decided(self):
+        text = describe_trip({"ideas": {"when": "mid-April"}})
+        self.assertIn("- Starting idea for When (dates / time of year) (not decided yet): mid-April", text)
+        self.assertNotIn("- When (dates / time of year): mid-April", text)
+
+    def test_locked_decision_replaces_idea(self):
+        trip = {"ideas": {"when": "mid-April"}, "decided": {"when": "Apr 10-20"}}
+        text = describe_trip(trip)
+        self.assertIn("- When (dates / time of year): Apr 10-20", text)
+        self.assertNotIn("mid-April", text)
+
+    def test_preferences_replace_idea_for_same_category(self):
+        # The preferences box is pre-filled from the idea, so the edited preferences win.
+        trip = {"ideas": {"when": "mid-April"}, "prefs": {"when": "mid-April, avoid Semana Santa"}}
+        text = describe_trip(trip)
+        self.assertIn("- Preferences for When (dates / time of year): mid-April, avoid Semana Santa", text)
+        self.assertNotIn("Starting idea", text)
+
+    def test_blank_ideas_are_skipped(self):
+        self.assertEqual(describe_trip({"ideas": {"when": "  "}}), "- Nothing yet")
+
+
+class RetryTest(unittest.TestCase):
+    """'Not quite right?' reruns: the AI must see what was ruled out and why."""
+
+    def test_rejected_options_and_feedback_are_included(self):
+        trip = {"rejected": {"where": {"options": ["Costa Rica", "Peru"], "feedback": ["too touristy"]}}}
+        text = describe_trip(trip)
+        self.assertIn("- Already ruled out for Where (destination): Costa Rica; Peru", text)
+        self.assertIn("- What they didn't like about earlier Where (destination) options: too touristy", text)
+
+    def test_rejections_ignored_once_category_is_locked(self):
+        trip = {"decided": {"where": "Guatemala"}, "rejected": {"where": {"options": ["Peru"], "feedback": ["meh"]}}}
+        self.assertEqual(describe_trip(trip), "- Where (destination): Guatemala")
+
+
 class CategoryKeyTest(unittest.TestCase):
     """The AI sometimes returns a category label instead of its key; the page needs the key."""
 
