@@ -1,0 +1,28 @@
+# Render Blueprint for Nextstop. Render reads this when you create the service from the repo.
+services:
+  - type: web
+    name: nextstop
+    runtime: python
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    # One worker so the in-memory rate limit is shared by every request; threads handle concurrency.
+    # 120s timeout because AI calls can take up to 90s.
+    startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
+    healthCheckPath: /
+    # Deploy to production only after the GitHub Actions checks on main pass.
+    autoDeployTrigger: checksPass
+    # Every pull request gets its own preview URL; it is deleted when the PR closes.
+    previews:
+      generation: automatic
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: OPENROUTER_API_KEY
+        sync: false   # secret: you paste it into the Render dashboard; never stored in git
+      - key: OPENROUTER_MODEL
+        value: anthropic/claude-sonnet-5.5
+      - key: POSTHOG_KEY
+        sync: false
+      - key: POSTHOG_HOST
+        value: https://us.i.posthog.com

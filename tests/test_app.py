@@ -80,3 +80,38 @@ class CategoryKeyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SecurityTest(unittest.TestCase):
+    """Build 3 hardening. These send bad bodies, so no AI call (and no cost) ever happens."""
+
+    def setUp(self):
+        from app import app, limiter
+        limiter.reset()
+        self.client = app.test_client()
+
+    def test_rate_limit_returns_429(self):
+        # Same check as the live audit: 30 calls in a row must start returning 429.
+        codes = [self.client.post("/api/options", json={}).status_code for _ in range(30)]
+        self.assertIn(429, codes)
+        self.assertEqual(codes[-1], 429)
+        self.assertIn("error", self.client.post("/api/options", json={}).get_json())
+
+    def test_each_visitor_has_their_own_limit(self):
+        for _ in range(30):
+            self.client.post("/api/next", json={}, environ_base={"REMOTE_ADDR": "1.1.1.1"})
+        other = self.client.post("/api/next", json={}, environ_base={"REMOTE_ADDR": "2.2.2.2"})
+        self.assertNotEqual(other.status_code, 429)
+
+    def test_malformed_body_is_400_not_500(self):
+        for body in [{}, {"decide": "nope", "trip": {}}, {"trip": "x"}, []]:
+            res = self.client.post("/api/options", json=body)
+            self.assertEqual(res.status_code, 400, body)
+
+    def test_compare_rejects_huge_shortlist(self):
+        res = self.client.post("/api/compare", json={"decide": "where", "trip": {}, "options": ["a"] * 50})
+        self.assertEqual(res.status_code, 400)
+
+    def test_oversized_request_is_rejected(self):
+        res = self.client.post("/api/options", json={"decide": "where", "trip": {"notes": "x" * 50000}})
+        self.assertEqual(res.status_code, 413)

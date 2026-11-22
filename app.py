@@ -14,6 +14,10 @@ import os
 import requests
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.exceptions import BadRequest
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()  # reads OPENROUTER_API_KEY (and optional OPENROUTER_MODEL) from .env
 
@@ -139,6 +143,33 @@ def ask_ai_once(user_prompt):
 
 
 app = Flask(__name__)
+# Cap request size: every byte of the trip ends up in a paid AI prompt.
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024
+# On Render the app sits behind one proxy; trust its X-Forwarded-For so each visitor gets their own rate limit.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+
+# Per-visitor (per-IP) limit on every route that calls the paid AI. In-memory storage is fine for one server process.
+AI_LIMIT = os.getenv("AI_RATE_LIMIT", "10 per minute;60 per hour")
+limiter = Limiter(get_remote_address, app=app, storage_uri="memory://")
+
+
+@app.errorhandler(429)
+def too_many_requests(e):
+    return jsonify({"error": "You're going a bit fast. Please wait a minute and try again."}), 429
+
+
+@app.errorhandler(413)
+def too_large(e):
+    return jsonify({"error": "That trip is too long to send. Try shortening your notes."}), 413
+
+
+@app.errorhandler(BadRequest)
+@app.errorhandler(KeyError)
+@app.errorhandler(TypeError)
+@app.errorhandler(AttributeError)
+def bad_request(e):
+    # Malformed or tampered request bodies get a 400, not a 500 with a stack trace.
+    return jsonify({"error": "That request didn't look right. Reload the page and try again."}), 400
 
 
 @app.route("/")
@@ -153,6 +184,7 @@ def home():
 
 
 @app.post("/api/options")
+@limiter.limit(AI_LIMIT)
 def options():
     """Step 2: suggest 2-4 options for the chosen decision."""
     body = request.get_json()
@@ -185,10 +217,13 @@ Return JSON:
 
 
 @app.post("/api/compare")
+@limiter.limit(AI_LIMIT)
 def compare():
     """Step 3: show the full trip picture for 2-3 shortlisted options."""
     body = request.get_json()
     decide = CATEGORIES[body["decide"]]
+    if not isinstance(body["options"], list) or not 2 <= len(body["options"]) <= 3:
+        raise BadRequest("Shortlist must have 2-3 options.")
     # Numbered list, not commas: option names can contain commas themselves.
     names = "".join(f"\n  {i + 1}. {name}" for i, name in enumerate(body["options"]))
     prompt = f"""The traveler's trip so far:
@@ -215,6 +250,7 @@ Return JSON:
 
 
 @app.post("/api/next")
+@limiter.limit(AI_LIMIT)
 def next_decision():
     """Step 4: suggest what to decide next. The traveler makes the final call."""
     body = request.get_json()
@@ -259,9 +295,12 @@ def run(prompt):
     except requests.HTTPError as e:
         if e.response is not None and e.response.status_code == 402:
             return jsonify({"error": "Your OpenRouter account is out of credits. Add credits at openrouter.ai/settings/credits."}), 402
-        return jsonify({"error": str(e)}), 500
-    except Exception as e:  # keep the prototype simple: show the error on the page
-        return jsonify({"error": str(e)}), 500
+        print(f"[ai] HTTP error: {e}")
+        return jsonify({"error": "The AI service had a problem. Try again in a moment."}), 502
+    except Exception as e:
+        # Log the details on the server; don't show internals to visitors.
+        print(f"[ai] error: {type(e).__name__}: {e}")
+        return jsonify({"error": "Something went wrong on our side. Try again."}), 500
 
 
 if __name__ == "__main__":
