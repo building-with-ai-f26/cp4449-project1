@@ -115,3 +115,35 @@ class SecurityTest(unittest.TestCase):
     def test_oversized_request_is_rejected(self):
         res = self.client.post("/api/options", json={"decide": "where", "trip": {"notes": "x" * 50000}})
         self.assertEqual(res.status_code, 413)
+
+
+class ProxyRateLimitTest(unittest.TestCase):
+    """Regression: on Render, X-Forwarded-For is 'visitor, cloudflare, render'. The limit must key on the visitor."""
+
+    def setUp(self):
+        from app import app, limiter
+        limiter.reset()
+        self.client = app.test_client()
+
+    def hit(self, path, xff):
+        return self.client.post(path, json={}, headers={"X-Forwarded-For": xff}).status_code
+
+    def test_limit_holds_when_cloudflare_and_render_hops_change(self):
+        # Same visitor, but every request arrives through a different Cloudflare edge and Render proxy (the live bug).
+        codes = [self.hit("/api/options", f"108.41.128.146, 104.22.72.{i}, 10.28.0.{i}") for i in range(30)]
+        self.assertEqual(codes[10:], [429] * 20)
+
+    def test_spoofed_header_cannot_dodge_limit(self):
+        # A visitor sending their own X-Forwarded-For only adds entries on the left.
+        codes = [self.hit("/api/options", f"6.6.6.{i}, 108.41.128.146, 104.22.72.1, 10.28.0.1") for i in range(30)]
+        self.assertEqual(codes[-1], 429)
+
+    def test_limit_is_shared_across_ai_routes(self):
+        xff = "5.5.5.5, 104.22.72.1, 10.28.0.1"
+        codes = [self.hit(p, xff) for p in ["/api/options", "/api/compare", "/api/next"] * 5]
+        self.assertEqual(codes[10:], [429] * 5)
+
+    def test_different_visitors_have_separate_limits(self):
+        for _ in range(15):
+            self.hit("/api/next", "1.1.1.1, 104.22.72.1, 10.28.0.1")
+        self.assertNotEqual(self.hit("/api/next", "2.2.2.2, 104.22.72.1, 10.28.0.1"), 429)
