@@ -6,7 +6,7 @@
 - **What this repo builds:** Nextstop, a layered trip planner. You enter what you know, pick one decision, and AI suggests options with trade-offs and "watch out for" warnings, compares the full trip for a shortlist, and suggests what to decide next (the user always chooses).
 - **Primary user & core workflow:** [See the living PRD in `docs/index.html`]
 - **Tech stack:** Python 3.12 / Flask / vanilla HTML+JS (`templates/index.html`) / OpenRouter API (default model `anthropic/claude-sonnet-5.5`). Trip state lives in the browser; no database. Hosted on Render (free web service, gunicorn).
-- **Live URL:** https://nextstop.onrender.com (update if Render assigns a different name)
+- **Live URL:** https://nextstop-x4bo.onrender.com
 
 ## 2. Commands
 - **Install dependencies:** `uv venv -p 3.12 .venv && uv pip install -p .venv/bin/python -r requirements.txt` (or `python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt`), then `cp .env.example .env` and add your OpenRouter key (and optionally your PostHog `phc_` key)
@@ -71,7 +71,7 @@ journal/, Plan.md      Optional course scratch notes (not the source of truth; d
 5. **Preview:** Render posts a preview URL on the PR (`nextstop-pr-<N>.onrender.com`). Open it and run the core workflow once (Knowns → Options → Compare → What's next).
 6. **Merge (Ask me first):** after the human says yes, `gh pr merge --squash --delete-branch`.
 7. **Deploy:** Render auto-deploys `main` once checks pass (`autoDeployTrigger: checksPass`). Watch it in the Render dashboard → Events.
-8. **Verify live:** `curl -s -o /dev/null -w "%{http_code}" https://nextstop.onrender.com/` returns 200, then click through the core workflow on the live site and confirm PostHog shows the pageview.
+8. **Verify live:** `curl -s -o /dev/null -w "%{http_code}" https://nextstop-x4bo.onrender.com/` returns 200, then click through the core workflow on the live site and confirm PostHog shows the pageview.
 9. **Rollback if broken (Ask me first):** fastest is Render dashboard → Events → pick the last good deploy → **Rollback**. Then fix forward with `git revert <bad-sha>` in a new PR so `main` matches what's live.
 
 > Free-tier note: the Render service sleeps after ~15 min idle; the first visit can take ~30-60s to wake up.

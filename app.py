@@ -307,3 +307,10 @@ if __name__ == "__main__":
     # Debug mode shows an interactive debugger on errors. Never expose it on a shared link.
     # Turn it on locally only:  FLASK_DEBUG=1 .venv/bin/python app.py
     app.run(debug=os.getenv("FLASK_DEBUG") == "1", port=5050)
+
+
+@app.get("/_diag_ip")  # TEMPORARY: preview-only diagnostic, removed before merge
+def _diag_ip():
+    h = request.headers
+    return jsonify({k: h.get(k) for k in ["X-Forwarded-For", "CF-Connecting-IP", "True-Client-IP", "X-Real-IP"]}
+                   | {"remote_addr": request.remote_addr})
