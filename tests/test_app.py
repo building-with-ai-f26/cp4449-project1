@@ -2,7 +2,7 @@
 
 import unittest
 
-from app import describe_trip, to_category_key
+from app import describe_plan, describe_trip, normalize_sandbox, to_category_key, to_number
 
 
 class DescribeTripTest(unittest.TestCase):
@@ -78,6 +78,45 @@ class CategoryKeyTest(unittest.TestCase):
         self.assertEqual(to_category_key("Where"), "where")
 
 
+class CalendarHelpersTest(unittest.TestCase):
+    """Calendar view (#6): AI replies are cleaned into numbers the budget can add up."""
+
+    def test_to_number_reads_prices(self):
+        self.assertEqual(to_number(40), 40)
+        self.assertEqual(to_number("~$40"), 40)
+        self.assertEqual(to_number("$1,200"), 1200)
+        self.assertEqual(to_number("~$35-45/night"), 35)
+        self.assertEqual(to_number("free"), 0)
+        self.assertEqual(to_number(None), 0)
+
+    def test_normalize_fills_defaults_and_coerces(self):
+        raw = {"flights": {"route": "JFK-GUA", "est_cost": "~$500"},
+               "legs": [{"name": "Antigua", "nightly": "~$40", "items": [
+                   {"title": "Acatenango overnight", "kind": "Activity", "days": "2", "est_cost": "$100"},
+                   {"title": "", "kind": "activity"},
+                   {"title": "Mystery", "kind": "spaceship", "days": 99}]}]}
+        out = normalize_sandbox(raw)
+        self.assertEqual(out["flights"]["est_cost"], 500)
+        self.assertEqual(out["food_per_day"], 0)
+        leg = out["legs"][0]
+        self.assertEqual(leg["nightly"], 40)
+        self.assertEqual([i["title"] for i in leg["items"]], ["Acatenango overnight", "Mystery"])
+        self.assertEqual(leg["items"][0]["kind"], "activity")
+        self.assertEqual(leg["items"][0]["days"], 2)
+        self.assertEqual(leg["items"][0]["est_cost"], 100)
+        self.assertEqual(leg["items"][1]["kind"], "activity")  # unknown kind falls back
+        self.assertEqual(leg["items"][1]["days"], 5)          # capped
+
+    def test_normalize_handles_empty_reply(self):
+        out = normalize_sandbox({})
+        self.assertEqual(out["legs"], [])
+        self.assertIsNone(out["flights"])
+
+    def test_describe_plan_skips_blanks(self):
+        text = describe_plan({"where": "Guatemala", "what": "  ", "budget": "~$1,200"})
+        self.assertEqual(text, "- Where: Guatemala\n- Budget idea: ~$1,200")
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -96,6 +135,12 @@ class SecurityTest(unittest.TestCase):
         self.assertIn(429, codes)
         self.assertEqual(codes[-1], 429)
         self.assertIn("error", self.client.post("/api/options", json={}).get_json())
+
+    def test_calendar_sandbox_is_rate_limited(self):
+        # Rule 8: every AI route shares the limit. A list body is invalid (400), so no AI call happens.
+        codes = [self.client.post("/api/sandbox", json=[]).status_code for _ in range(15)]
+        self.assertEqual(codes[:10], [400] * 10)
+        self.assertEqual(codes[10:], [429] * 5)
 
     def test_each_visitor_has_their_own_limit(self):
         for _ in range(30):

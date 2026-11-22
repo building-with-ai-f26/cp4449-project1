@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nextstop · Trip calendar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f5f5f4; --card: #fff; --text: #1f2a2e; --muted: #6b7570; --line: #2b2b2b; --soft-line: #d6d3d1;
+      --accent: #0f766e; --accent-dark: #115e59; --accent-soft: #e6f4f1;
+      --warn-text: #9a3f12; --warn-bg: #fff4e6; --flag: #e5533d;
+      --col-h: 560px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+           color: var(--text); line-height: 1.45; -webkit-font-smoothing: antialiased;
+           /* dotted canvas, like the Figma board */
+           background: var(--bg) radial-gradient(#cfcac4 1px, transparent 1px) 0 0 / 18px 18px; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px 6px; gap: 12px; }
+    .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+    .logo span { color: var(--accent); }
+    .logo .logo-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 15px; }
+    .header-links { display: flex; gap: 16px; align-items: center; }
+    .link-btn { background: none; border: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px;
+                font-weight: 600; text-decoration: underline; text-underline-offset: 3px; padding: 2px; }
+    .link-btn:hover { color: var(--accent); }
+    #error { padding: 0 24px; }
+    .error { background: #fdecec; color: #991b1b; border: 1px solid #f5c2c2; border-radius: 10px; padding: 8px 12px; font-weight: 600; font-size: 14px; }
+
+    /* One horizontal board, like the mockup: High level | days | Sandbox | Thoughts | Budget | Flight details | Trip status */
+    .board { display: flex; gap: 22px; align-items: flex-start; overflow-x: auto; padding: 20px 24px 100px; }
+    .col { flex: 0 0 auto; width: 190px; height: var(--col-h); background: var(--card); border: 1px solid var(--line);
+           padding: 14px 12px; font-size: 13px; position: relative; display: flex; flex-direction: column; gap: 8px; }
+    .col.hl { margin-top: 64px; height: calc(var(--col-h) - 64px); }
+    .col .scroll { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .col-title { text-align: center; font-weight: 800; font-size: 13.5px; }
+    .col-note { text-align: center; color: var(--muted); font-size: 11.5px; }
+    .col.wide { width: 230px; }
+    .lbl { font-weight: 800; font-size: 12.5px; }
+    textarea, input[type=text], input[type=date] { width: 100%; font: inherit; font-size: 12.5px; border: 1px solid var(--soft-line);
+      border-radius: 4px; padding: 5px 7px; background: #fff; color: var(--text); resize: vertical; }
+    textarea:focus, input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+
+    /* Days */
+    .days { display: flex; gap: 12px; align-items: flex-start; }
+    .daycol { width: 120px; display: flex; flex-direction: column; gap: 6px; }
+    .pill { border: 1px solid var(--line); background: #fff; text-align: center; font-size: 12px; padding: 3px 4px; }
+    .pill.date { color: var(--muted); }
+    .pill.leg { border-style: dashed; color: var(--accent-dark); font-weight: 700; font-size: 11px; }
+    .cards { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+    .card { background: #fff; border: 1px solid var(--line); min-height: 64px; padding: 8px 18px 8px 8px; font-size: 12px;
+            display: flex; flex-direction: column; justify-content: center; text-align: center; position: relative; }
+    .card .part { color: var(--muted); font-size: 10.5px; }
+    .card .w { color: var(--warn-text); font-size: 10.5px; margin-top: 3px; }
+    .card .x { position: absolute; top: 2px; right: 3px; border: none; background: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 0 2px; opacity: 0; }
+    .card:hover .x { opacity: 1; }
+    .card .x:hover { color: var(--flag); }
+    .card.custom { border-style: dashed; }
+    .add-own { font-size: 11.5px; text-align: center; }
+    .daytools { display: flex; justify-content: space-between; }
+    .daytools .link-btn { font-size: 10.5px; }
+    .add-day { width: 90px; height: 120px; margin-top: 64px; border: 1px dashed var(--line); background: rgba(255,255,255,.6);
+               display: grid; place-items: center; cursor: pointer; font-weight: 800; color: var(--accent-dark); font-size: 13px; }
+    .add-day:hover { background: var(--accent-soft); }
+    .empty-days { width: 240px; margin-top: 64px; color: var(--muted); font-size: 13px; text-align: center; padding: 20px; border: 1px dashed var(--soft-line); background: rgba(255,255,255,.6); }
+
+    /* Sandbox */
+    .leg { margin-bottom: 4px; }
+    .leg-name { font-weight: 800; }
+    .leg-meta { color: var(--muted); font-size: 11px; }
+    .sb { list-style: disc; margin: 4px 0 0; padding-left: 16px; }
+    .sb li { margin-bottom: 6px; }
+    .sb .meta { color: var(--muted); font-size: 11px; }
+    .sb .w { color: var(--warn-text); font-size: 11px; }
+    select { font: inherit; font-size: 11px; border: 1px solid var(--accent); color: var(--accent-dark); background: #fff; border-radius: 4px; padding: 1px 4px; margin-top: 2px; cursor: pointer; max-width: 100%; }
+    .btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 7px 10px; font: inherit; font-weight: 800; font-size: 12.5px; cursor: pointer; }
+    .btn:hover:not(:disabled) { background: var(--accent-dark); }
+    .btn:disabled { opacity: .5; cursor: wait; }
+    .btn-line { background: #fff; color: var(--accent-dark); border: 1px solid var(--accent); }
+    .btn-line:hover:not(:disabled) { background: var(--accent-soft); }
+    .btn-tiny { padding: 2px 7px; font-size: 11px; border-radius: 4px; }
+
+    /* Budget / flights / status */
+    .row { display: flex; justify-content: space-between; gap: 8px; }
+    .row .m { color: var(--muted); font-size: 11px; }
+    .total { border-top: 1px solid var(--line); padding-top: 6px; font-weight: 800; font-size: 14px; }
+    .tbd { color: #a8a29e; }
+    .status-big { font-size: 13.5px; }
+    .hint { color: var(--muted); font-size: 11.5px; }
+    .w-box { color: var(--warn-text); background: var(--warn-bg); padding: 5px 7px; font-size: 11.5px; }
+
+    /* Ripple flags: the red diamonds from the mockup */
+    .col.flagged { border-color: var(--flag); box-shadow: 0 0 0 1px var(--flag); }
+    .diamond { position: absolute; left: 50%; bottom: -58px; width: 132px; height: 132px; margin-left: -66px; z-index: 2;
+               background: var(--flag); transform: rotate(45deg); display: grid; place-items: center; box-shadow: 0 6px 18px rgba(229,83,61,.35); }
+    .diamond span { transform: rotate(-45deg); color: #fff; font-size: 11px; font-weight: 800; text-align: center; width: 120px; line-height: 1.25; }
+    .diamond.small { width: 104px; height: 104px; margin-left: -52px; }
+    .diamond.small span { width: 92px; }
+    .note { font-size: 12px; color: var(--muted); text-align: center; margin: -60px 0 30px; }
+    .flag-list { color: #b42d18; font-weight: 700; font-size: 11.5px; border-bottom: 1px dashed var(--flag); padding-bottom: 6px; }
+    .flag-list ul { margin: 2px 0 0; padding-left: 14px; }
+    .spinner { display: inline-block; width: 11px; height: 11px; border: 2px solid rgba(255,255,255,.5); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+  {% if posthog_key %}
+  <script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  posthog.init({{ posthog_key | tojson }}, { api_host: {{ posthog_host | tojson }}, person_profiles: 'identified_only' });
+  </script>
+  {% endif %}
+</head>
+<body>
+  <header>
+    <div class="logo"><span class="logo-mark" aria-hidden="true">✈︎</span><div>next<span>stop</span></div></div>
+    <div class="header-links">
+      <a class="link-btn" href="/">Step-by-step view</a>
+      <button class="link-btn" onclick="startOver()">Start over</button>
+    </div>
+  </header>
+  <div id="error"></div>
+
+  <div class="board">
+    <div class="col hl" id="hl"></div>
+    <div class="days" id="days"></div>
+    <div class="col wide" id="sandbox"></div>
+    <div class="col" id="thoughts-col"></div>
+    <div class="col wide" id="budget"></div>
+    <div class="col" id="flights"></div>
+    <div class="col" id="status"></div>
+  </div>
+  <p class="note">Costs and travel times are AI estimates, not live prices. Double-check before booking.</p>
+
+<script>
+  // The whole plan lives in this browser (and localStorage). The server only calls the AI.
+  const STORE = "nextstop-calendar-v1";
+  const AI_FIELDS = ["origin", "where", "what", "budget", "length", "when", "stay"];  // sent to /api/sandbox
+  const KIND_ICON = { flight: "✈️", transport: "🚐", activity: "🥾", rest: "😌", custom: "" };
+
+  const emptyPlan = () => ({
+    origin: "", where: "", what: "", budget: "", length: "", when: "", stay: "",
+    startDate: "", thoughts: "",
+    days: [],          // [{ items: [{ uid, id, part, of, title, kind, leg, est_cost, watch_out, src }] }]
+    sandbox: [],       // not-yet-placed building blocks: { id, title, kind, leg, days, est_cost, why, watch_out }
+    legs: {},          // { "Antigua": { nightly, stay_note, order } }
+    flights: null, foodPerDay: 0, suggestedDays: null,
+    saved: null,       // snapshot from "Save this version", used for ripple flags
+  });
+  let plan = load();
+  let nextId = Date.now();
+  const uid = () => String(nextId++);
+
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const money = (n) => "$" + Math.round(n).toLocaleString();
+  const signed = (n) => (n > 0 ? "+" : "−") + money(Math.abs(n));
+  // A text box bound to a plan field (re-renders the parts that depend on it).
+  const box = (k, ph, rows = 2) => `<textarea rows="${rows}" placeholder="${esc(ph)}" oninput="plan['${k}'] = this.value; save(); renderStatus()">${esc(plan[k])}</textarea>`;
+
+  function load() {
+    try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.days)) return { ...emptyPlan(), ...s }; } catch (e) {}
+    return emptyPlan();
+  }
+  function save() { try { localStorage.setItem(STORE, JSON.stringify(plan)); } catch (e) {} }
+  function showError(msg) { $("error").innerHTML = msg ? `<div class="error">${esc(msg)}</div>` : ""; }
+
+  function dateFor(i) {
+    if (!plan.startDate) return "";
+    const d = new Date(plan.startDate + "T12:00:00");
+    d.setDate(d.getDate() + i);
+    return d.toLocaleDateString(undefined, { month: "long", day: "numeric" }).toLowerCase();
+  }
+
+  // Where you sleep on day i = the leg of the last item that day; otherwise carry over from the day before.
+  function dayLeg(i) {
+    for (let j = i; j >= 0; j--) {
+      const withLeg = plan.days[j].items.filter(it => it.leg && it.kind !== "flight");  // a flight doesn't tell you where you sleep
+      if (withLeg.length) return withLeg[withLeg.length - 1].leg;
+    }
+    return null;
+  }
+
+  // ---------- numbers: budget + snapshot for ripple flags ----------
+  function numbers() {
+    const n = plan.days.length;
+    const nightsByLeg = {};
+    for (let i = 0; i < n - 1; i++) {        // you don't sleep there the night you fly home
+      const leg = dayLeg(i) || "Not set yet";
+      nightsByLeg[leg] = (nightsByLeg[leg] || 0) + 1;
+    }
+    const stays = Object.entries(nightsByLeg).map(([leg, nights]) => {
+      const nightly = (plan.legs[leg] || {}).nightly || 0;
+      return { leg, nights, nightly, cost: nights * nightly };
+    });
+    const firstParts = plan.days.flatMap(d => d.items).filter(it => it.part === 1);
+    const extras = firstParts.filter(it => it.kind !== "flight" && it.est_cost);
+    const activities = extras.reduce((s, it) => s + it.est_cost, 0);
+    const flights = plan.flights ? plan.flights.est_cost : 0;
+    const food = plan.foodPerDay * n;
+    const total = flights + stays.reduce((s, x) => s + x.cost, 0) + activities + food;
+    return { days: n, nightsByLeg, stays, extras, activities, flights, food, total, startDate: plan.startDate };
+  }
+
+  function flags() {
+    const out = { budget: [], flights: [] };
+    if (!plan.saved) return out;
+    const now = numbers(), was = plan.saved;
+    if (now.days !== was.days) out.flights.push(`Trip is now ${now.days} days (was ${was.days})`);
+    if (now.startDate !== was.startDate) out.flights.push("Start date changed");
+    const legs = new Set([...Object.keys(now.nightsByLeg), ...Object.keys(was.nightsByLeg)]);
+    for (const leg of legs) {
+      const d = (now.nightsByLeg[leg] || 0) - (was.nightsByLeg[leg] || 0);
+      if (!d) continue;
+      const nightly = (plan.legs[leg] || {}).nightly || 0;
+      out.budget.push(`${d > 0 ? "more" : "fewer"} nights in ${leg} so ${d > 0 ? "more" : "less"} accommodation` + (nightly ? ` (${signed(d * nightly)})` : ""));
+    }
+    if (Math.round(now.activities) !== Math.round(was.activities)) out.budget.push(`activities ${signed(now.activities - was.activities)}`);
+    if (out.budget.length && Math.round(now.total) !== Math.round(was.total)) out.budget.push(`total ${money(now.total)} (was ${money(was.total)})`);
+    return out;
+  }
+
+  function saveVersion() { plan.saved = numbers(); render(); }
+
+  // ---------- rendering ----------
+  function render() {
+    renderDays(); renderSandbox(); renderBudget(); renderFlights(); renderStatus();
+    save();
+  }
+
+  // Columns with text boxes are drawn once (so typing isn't interrupted).
+  function renderStatic() {
+    $("hl").innerHTML = `
+      <div class="col-title">HIGH LEVEL</div>
+      <div class="scroll">
+        <div class="lbl">Where:</div>${box("where", "e.g. Guatemala")}
+        <div class="lbl">General what to do:</div>${box("what", "e.g. Acatenango hike, Lake Atitlán, a little Antigua", 4)}
+        <div class="lbl">Accommodation:</div>${box("stay", "e.g. quiet guesthouses with a kitchen", 3)}
+        <div class="lbl">Rough length / when:</div>${box("length", "e.g. 7–10 days", 1)}${box("when", "e.g. April", 1)}
+      </div>`;
+    $("thoughts-col").innerHTML = `
+      <div class="col-title">Thoughts:</div>
+      <textarea style="flex:1" placeholder="• not enough days at the lake, need to adjust&#10;• the hiking company only runs certain days"
+        oninput="plan.thoughts = this.value; save()">${esc(plan.thoughts)}</textarea>`;
+  }
+
+  function renderDays() {
+    const cols = plan.days.map((d, i) => {
+      const leg = dayLeg(i);
+      const cards = d.items.map(it => `
+        <div class="card ${esc(it.kind)}">
+          <div>${KIND_ICON[it.kind] ? KIND_ICON[it.kind] + " " : ""}${esc(it.title)}</div>
+          ${it.of > 1 ? `<div class="part">day ${it.part} of ${it.of}</div>` : ""}
+          ${it.watch_out && it.part === 1 ? `<div class="w" title="${esc(it.watch_out)}">⚠ watch out</div>` : ""}
+          <button class="x" title="Remove (back to the sandbox)" onclick="unplace('${it.id}')">×</button>
+        </div>`).join("");
+      return `
+        <div class="daycol">
+          <div class="pill date">${plan.startDate ? esc(dateFor(i)) : "&nbsp;"}</div>
+          <div class="pill">Day ${i + 1}</div>
+          ${leg ? `<div class="pill leg">${esc(leg)}</div>` : ""}
+          <div class="cards">${cards}</div>
+          <input type="text" class="add-own" placeholder="+ add" onkeydown="if(event.key==='Enter'){addOwn(${i}, this.value)}" />
+          <div class="daytools">
+            <button class="link-btn" onclick="insertDay(${i})">+ day after</button>
+            <button class="link-btn" onclick="removeDay(${i})">remove</button>
+          </div>
+        </div>`;
+    }).join("");
+    $("days").innerHTML = (cols || `<div class="empty-days">No days yet. Get ideas in the <strong>Sandbox</strong> and slot them in, or add a day.</div>`) +
+      `<div class="add-day" onclick="insertDay(${plan.days.length - 1})">+ day</div>`;
+  }
+
+  function renderSandbox() {
+    const legNames = Object.keys(plan.legs).sort((a, b) => plan.legs[a].order - plan.legs[b].order);
+    const dayOptions = plan.days.map((_, i) => `<option value="${i}">Day ${i + 1}</option>`).join("");
+    const legsHtml = legNames.map((leg, n) => {
+      const items = plan.sandbox.filter(it => it.leg === leg);
+      const info = plan.legs[leg];
+      return `
+        <div class="leg">
+          <div class="leg-name">LEG ${n + 1}: ${esc(leg)}</div>
+          ${info.nightly ? `<div class="leg-meta">stays ~${money(info.nightly)}/night${info.stay_note ? " · " + esc(info.stay_note) : ""}</div>` : ""}
+          <ul class="sb">${items.map(it => `
+            <li>${esc(it.title)} <span class="meta">${it.days > 1 ? it.days + " days · " : ""}${it.est_cost ? "~" + money(it.est_cost) : ""}</span>
+              ${it.why ? `<div class="meta">${esc(it.why)}</div>` : ""}
+              ${it.watch_out ? `<div class="w">⚠ ${esc(it.watch_out)}</div>` : ""}
+              <select onchange="place('${it.id}', this.value)"><option value="">slot into…</option>${dayOptions}<option value="end">new day at end</option></select>
+            </li>`).join("") || `<li class="meta">all slotted in</li>`}
+          </ul>
+          <button class="btn btn-line btn-tiny" onclick="suggest('${esc(leg).replace(/'/g, "\\'")}')">↻ more ideas</button>
+        </div>`;
+    }).join("");
+    $("sandbox").innerHTML = `
+      <div class="col-title">SANDBOX:</div>
+      <div class="col-note">(a place where the things you want to do live, so you can slot them in and out)</div>
+      <div class="scroll">${legsHtml || `<div class="hint">Fill in the High level, then get ideas. They show up here grouped by leg.</div>`}</div>
+      <button class="btn" id="suggest-btn" onclick="suggest()">✨ ${legNames.length ? "Refresh ideas" : "Get ideas"}</button>`;
+  }
+
+  function diamond(text, small) { return `<div class="diamond ${small ? "small" : ""}"><span>${esc(text)}</span></div>`; }
+
+  function renderBudget() {
+    const b = numbers();
+    const f = flags().budget;
+    const el = $("budget");
+    el.classList.toggle("flagged", f.length > 0);
+    const stayLines = b.stays.map((s, i) => `
+      <div class="row"><span>Accommodation ${i + 1}: ${esc(s.leg)} <span class="m">${s.nights}n${s.nightly ? " × " + money(s.nightly) : ""}</span></span><span>${s.nightly ? money(s.cost) : "?"}</span></div>`).join("");
+    const actLines = b.extras.filter(it => it.kind !== "transport").map((it, i) => `
+      <div class="row"><span>Activity ${i + 1}: ${esc(it.title)}</span><span>${money(it.est_cost)}</span></div>`).join("");
+    const transLines = b.extras.filter(it => it.kind === "transport").map((it, i) => `
+      <div class="row"><span>Transportation ${i + 1}: ${esc(it.title)}</span><span>${money(it.est_cost)}</span></div>`).join("");
+    el.innerHTML = `
+      <div class="col-title">Budget</div>
+      <div class="scroll">
+        ${f.length ? `<div class="flag-list">Since your saved version:<ul>${f.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+        <div class="row total" style="border:none;padding:0"><span>Cost →</span><span>${b.days ? "~" + money(b.total) : "<span class='tbd'>TBD</span>"}</span></div>
+        <div class="row"><span>Flights:</span><span>${plan.flights ? money(b.flights) : "?"}</span></div>
+        ${stayLines || `<div class="row"><span>Accommodation:</span><span class="tbd">—</span></div>`}
+        ${actLines || `<div class="row"><span>Activities:</span><span class="tbd">—</span></div>`}
+        ${transLines || `<div class="row"><span>Transportation:</span><span class="tbd">—</span></div>`}
+        <div class="row"><span>Food: <span class="m">${b.days} days${plan.foodPerDay ? " × " + money(plan.foodPerDay) : ""}</span></span><span>${plan.foodPerDay ? money(b.food) : "?"}</span></div>
+        <div class="lbl" style="margin-top:8px">Budget idea:</div>${box("budget", "e.g. cheap, ~$1,200 total", 1)}
+      </div>
+      ${f.length ? diamond(`${b.total > (plan.saved ? plan.saved.total : 0) ? "MORE" : "LESS"} ACCOMMODATION / COST → ${money(b.total)}`) : ""}`;
+  }
+
+  function renderFlights() {
+    const f = flags().flights;
+    const el = $("flights");
+    el.classList.toggle("flagged", f.length > 0);
+    const fl = plan.flights;
+    const n = plan.days.length;
+    el.innerHTML = `
+      <div class="col-title">Flight Details</div>
+      <div class="scroll">
+        <div class="lbl">Flying from:</div>
+        <input type="text" value="${esc(plan.origin)}" placeholder="e.g. New York" oninput="plan.origin = this.value; save()" />
+        ${fl ? `
+          <div class="row"><span>${esc(fl.route)}</span></div>
+          <div class="row"><span>Estimate</span><span>~${money(fl.est_cost)}</span></div>
+          <div class="row"><span>Out</span><span>${n ? (plan.startDate ? esc(dateFor(0)) : "Day 1") : "TBD"}</span></div>
+          <div class="row"><span>Back</span><span>${n ? (plan.startDate ? esc(dateFor(n - 1)) : "Day " + n) : "TBD"}</span></div>
+          ${fl.watch_out ? `<div class="w-box">⚠ ${esc(fl.watch_out)}</div>` : ""}` : `<div class="hint">An estimate appears once you get ideas.</div>`}
+        ${f.length ? `<div class="flag-list"><ul>${f.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      </div>
+      ${f.length ? diamond("CHANGE FLIGHT DAYS", true) : ""}`;
+  }
+
+  function renderStatus() {
+    const n = plan.days.length;
+    const f = flags();
+    const changed = f.budget.length + f.flights.length > 0;
+    const when = plan.startDate && n ? `${dateFor(0)} – ${dateFor(n - 1)}` : "";
+    const tbd = `<span class="tbd">TBD</span>`;
+    $("status").innerHTML = `
+      <div class="col-title">Trip Status</div>
+      <div class="scroll status-big">
+        <div>Length: ${n ? `<strong>${n} day${n > 1 ? "s" : ""}</strong>` : tbd}</div>
+        <div>Where: ${plan.where.trim() ? `<strong>${esc(plan.where)}</strong>` : tbd}</div>
+        <div>When: ${when ? `<strong>${esc(when)}</strong>` : tbd}</div>
+        ${plan.suggestedDays ? `<div class="hint">💡 About ${plan.suggestedDays} days covers what you want.</div>` : ""}
+        <div class="lbl" style="margin-top:8px">Start date:</div>
+        <input type="date" value="${esc(plan.startDate)}" onchange="plan.startDate = this.value; render()" />
+        ${n ? `<button class="btn ${changed ? "" : "btn-line"}" style="margin-top:10px" onclick="saveVersion()">${changed ? "✓ Got it, save this version" : plan.saved ? "✓ Version saved" : "Save this version"}</button>
+          <div class="hint">${plan.saved ? "Changes since your saved version show up as red flags." : "Save a version, then changes flag what they affect."}</div>` : ""}
+      </div>`;
+  }
+
+  // ---------- actions ----------
+  function ensureDays(count) { while (plan.days.length < count) plan.days.push({ items: [] }); }
+
+  function place(id, where) {
+    if (where === "") return;
+    const idx = plan.sandbox.findIndex(it => it.id === id);
+    if (idx < 0) return;
+    const item = plan.sandbox[idx];
+    const start = where === "end" ? plan.days.length : Number(where);
+    ensureDays(start + item.days);
+    for (let p = 0; p < item.days; p++) {
+      plan.days[start + p].items.push({ uid: uid(), id: item.id, part: p + 1, of: item.days, title: item.title,
+        kind: item.kind, leg: item.leg, est_cost: p === 0 ? item.est_cost : 0, watch_out: item.watch_out, src: item });
+    }
+    plan.sandbox.splice(idx, 1);
+    render();
+  }
+
+  // Remove every day-part of an item; sandbox items go back to the sandbox, your own items are deleted.
+  function unplace(id) {
+    let src = null;
+    for (const d of plan.days) {
+      d.items = d.items.filter(it => { if (it.id === id) { src = src || it.src || null; return false; } return true; });
+    }
+    if (src) plan.sandbox.push(src);
+    render();
+  }
+
+  function addOwn(i, text) {
+    text = text.trim();
+    if (!text) return;
+    plan.days[i].items.push({ uid: uid(), id: uid(), part: 1, of: 1, title: text, kind: "custom", leg: dayLeg(i), est_cost: 0 });
+    render();
+  }
+
+  function insertDay(i) { plan.days.splice(i + 1, 0, { items: [] }); render(); }
+
+  function removeDay(i) {
+    // Items on this day go back to the sandbox (your own typed items are dropped).
+    // Multi-day items come off the calendar entirely, including their parts on other days.
+    const removed = plan.days[i].items;
+    const srcById = Object.fromEntries(removed.filter(it => it.src).map(it => [it.id, it.src]));
+    plan.days.splice(i, 1);
+    for (const id of new Set(removed.map(it => it.id))) {
+      for (const d of plan.days) d.items = d.items.filter(it => it.id !== id);
+      if (srcById[id]) plan.sandbox.push(srcById[id]);
+    }
+    render();
+  }
+
+  async function suggest(leg) {
+    showError("");
+    const btn = $("suggest-btn");
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span>${leg ? "More for " + esc(leg) + "…" : "Thinking…"}`;
+    try {
+      const exclude = leg ? [...plan.sandbox, ...plan.days.flatMap(d => d.items)].filter(it => it.leg === leg).map(it => it.title) : [];
+      const highLevel = Object.fromEntries(AI_FIELDS.map(k => [k, plan[k]]));
+      const res = await fetch("/api/sandbox", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: highLevel, leg: leg || "", exclude: [...new Set(exclude)] }) });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Something went wrong.");
+      if (!leg) {
+        if (data.flights) plan.flights = data.flights;
+        if (data.food_per_day) plan.foodPerDay = data.food_per_day;
+        if (data.suggested_days) plan.suggestedDays = data.suggested_days;
+      }
+      const have = new Set([...plan.sandbox, ...plan.days.flatMap(d => d.items)].map(it => it.title.toLowerCase()));
+      for (const l of data.legs) {
+        const name = leg || l.name;
+        if (!plan.legs[name]) plan.legs[name] = { nightly: l.nightly, stay_note: l.stay_note, order: Object.keys(plan.legs).length };
+        for (const it of l.items) {
+          if (have.has(it.title.toLowerCase())) continue;
+          plan.sandbox.push({ ...it, id: uid(), leg: name });
+        }
+      }
+    } catch (err) {
+      showError(err.message);
+    }
+    render();
+  }
+
+  function startOver() {
+    plan = emptyPlan();
+    renderStatic();
+    render();
+  }
+
+  renderStatic();
+  render();
+</script>
+</body>
+</html>
