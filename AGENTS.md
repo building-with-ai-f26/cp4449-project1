@@ -6,7 +6,7 @@
 - **What this repo builds:** Nextstop, a layered trip planner. You enter what you know, pick one decision, and AI suggests options with trade-offs and "watch out for" warnings, compares the full trip for a shortlist, and suggests what to decide next (the user always chooses).
 - **Primary user & core workflow:** [See the living PRD in `docs/index.html`]
 - **Tech stack:** Python 3.12 / Flask / vanilla HTML+JS (`templates/index.html`) / OpenRouter API (default model `anthropic/claude-sonnet-5.5`). Trip state lives in the browser; no database. Hosted on Render (free web service, gunicorn).
-- **Live URL:** https://nextstop.onrender.com (update if Render assigns a different name)
+- **Live URL:** https://nextstop-x4bo.onrender.com
 
 ## 2. Commands
 - **Install dependencies:** `uv venv -p 3.12 .venv && uv pip install -p .venv/bin/python -r requirements.txt` (or `python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt`), then `cp .env.example .env` and add your OpenRouter key (and optionally your PostHog `phc_` key)
@@ -25,6 +25,7 @@
 | `POSTHOG_KEY` | No | Public `phc_` key. If blank, the local app loads no analytics. |
 | `POSTHOG_HOST` | No | Defaults to `https://us.i.posthog.com`. |
 | `AI_RATE_LIMIT` | No | Per-visitor limit on AI routes. Defaults to `10 per minute;60 per hour`. |
+| `PROXY_HOPS` | No | Proxies in front of the app (Cloudflare + Render = 3). Only change if Render changes its setup. |
 
 ## 2b. Project Structure
 ```
@@ -55,7 +56,7 @@ journal/, Plan.md      Optional course scratch notes (not the source of truth; d
 5. **Zero secrets in code:** Never hardcode API keys, tokens, or credentials. Always read from environment variables (`.env`) and update `.env.example` when new variables are needed.
 6. **Stop when looping:** If a fix fails twice in a row, stop, summarize what failed, and ask the human before trying a third approach.
 7. **Never turn on debug mode outside your own machine.** (Real mistake: an earlier agent session ran the app with `debug=True` hard-coded, which exposes Flask's interactive debugger, letting anyone who reaches the server run code. Fixed in commit "Turn off Flask debug mode unless FLASK_DEBUG=1".) Never set `FLASK_DEBUG` on Render, never pass `debug=True` in code, and production always runs through gunicorn, never `python app.py`.
-8. **Every route that calls the AI gets `@limiter.limit(AI_LIMIT)`** and a test proving it returns 429.
+8. **Every route that calls the AI gets `@ai_limit` (one shared per-visitor budget)** and a test proving it returns 429.
 
 ## 4. Ask Me First (stop and get explicit human approval)
 - **Deleting or changing data / databases:** `git push --force`, `git reset --hard`, deleting branches, deleting Render services or deploys, adding a database or changing schema.
@@ -71,7 +72,7 @@ journal/, Plan.md      Optional course scratch notes (not the source of truth; d
 5. **Preview:** Render posts a preview URL on the PR (`nextstop-pr-<N>.onrender.com`). Open it and run the core workflow once (Knowns → Options → Compare → What's next).
 6. **Merge (Ask me first):** after the human says yes, `gh pr merge --squash --delete-branch`.
 7. **Deploy:** Render auto-deploys `main` once checks pass (`autoDeployTrigger: checksPass`). Watch it in the Render dashboard → Events.
-8. **Verify live:** `curl -s -o /dev/null -w "%{http_code}" https://nextstop.onrender.com/` returns 200, then click through the core workflow on the live site and confirm PostHog shows the pageview.
+8. **Verify live:** `curl -s -o /dev/null -w "%{http_code}" https://nextstop-x4bo.onrender.com/` returns 200, then click through the core workflow on the live site and confirm PostHog shows the pageview.
 9. **Rollback if broken (Ask me first):** fastest is Render dashboard → Events → pick the last good deploy → **Rollback**. Then fix forward with `git revert <bad-sha>` in a new PR so `main` matches what's live.
 
 > Free-tier note: the Render service sleeps after ~15 min idle; the first visit can take ~30-60s to wake up.

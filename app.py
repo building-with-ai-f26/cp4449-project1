@@ -145,12 +145,17 @@ def ask_ai_once(user_prompt):
 app = Flask(__name__)
 # Cap request size: every byte of the trip ends up in a paid AI prompt.
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024
-# On Render the app sits behind one proxy; trust its X-Forwarded-For so each visitor gets their own rate limit.
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+# On Render a request passes visitor -> Cloudflare -> Render proxy -> app, so X-Forwarded-For arrives as
+# "visitor, cloudflare, render". Trust exactly those 3 hops: the visitor is 3rd from the right, and anything a
+# visitor fakes is added to the LEFT, so it can't change their rate-limit identity. (Verified on a PR preview.)
+PROXY_HOPS = int(os.getenv("PROXY_HOPS", "3"))
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=PROXY_HOPS)
 
 # Per-visitor (per-IP) limit on every route that calls the paid AI. In-memory storage is fine for one server process.
 AI_LIMIT = os.getenv("AI_RATE_LIMIT", "10 per minute;60 per hour")
 limiter = Limiter(get_remote_address, app=app, storage_uri="memory://")
+# One shared budget across all AI routes, so a visitor can't get 10/min on each route separately.
+ai_limit = limiter.shared_limit(AI_LIMIT, scope="ai")
 
 
 @app.errorhandler(429)
@@ -184,7 +189,7 @@ def home():
 
 
 @app.post("/api/options")
-@limiter.limit(AI_LIMIT)
+@ai_limit
 def options():
     """Step 2: suggest 2-4 options for the chosen decision."""
     body = request.get_json()
@@ -217,7 +222,7 @@ Return JSON:
 
 
 @app.post("/api/compare")
-@limiter.limit(AI_LIMIT)
+@ai_limit
 def compare():
     """Step 3: show the full trip picture for 2-3 shortlisted options."""
     body = request.get_json()
@@ -250,7 +255,7 @@ Return JSON:
 
 
 @app.post("/api/next")
-@limiter.limit(AI_LIMIT)
+@ai_limit
 def next_decision():
     """Step 4: suggest what to decide next. The traveler makes the final call."""
     body = request.get_json()
