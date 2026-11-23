@@ -147,3 +147,122 @@ class ProxyRateLimitTest(unittest.TestCase):
         for _ in range(15):
             self.hit("/api/next", "1.1.1.1, 104.22.72.1, 10.28.0.1")
         self.assertNotEqual(self.hit("/api/next", "2.2.2.2, 104.22.72.1, 10.28.0.1"), 429)
+
+
+class SavedTripsTest(unittest.TestCase):
+    """Saved trips (Supabase). The database is faked, so no keys or network are needed."""
+
+    TRIP_ID = "3f2b8c1e-4a5d-4e6f-9a7b-1c2d3e4f5a6b"
+
+    def setUp(self):
+        import app as app_module
+        from unittest import mock
+        app_module.limiter.reset()
+        self.app_module = app_module
+        self.client = app_module.app.test_client()
+        self.patches = [mock.patch.object(app_module, "SUPABASE_URL", "https://dev.example.supabase.co"),
+                        mock.patch.object(app_module, "SUPABASE_SECRET_KEY", "test-secret")]
+        for p in self.patches:
+            p.start()
+        self.calls = []
+        self.reply = []
+        self.req = mock.patch.object(app_module.requests, "request", side_effect=self.fake_request)
+        self.req.start()
+
+    def tearDown(self):
+        self.req.stop()
+        for p in self.patches:
+            p.stop()
+
+    def fake_request(self, method, url, headers=None, params=None, json=None, timeout=None):
+        from unittest import mock
+        self.calls.append({"method": method, "url": url, "headers": headers, "params": params, "json": json})
+        res = mock.Mock(content=b"x")
+        res.json.return_value = self.reply
+        res.raise_for_status.return_value = None
+        return res
+
+    def test_create_saves_only_known_fields_with_secret_key(self):
+        self.reply = [{"id": self.TRIP_ID}]
+        res = self.client.post("/api/trips", json={"trip": {"origin": "NYC", "decided": {"where": "Guatemala"}, "evil": 1}})
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.get_json(), {"id": self.TRIP_ID})
+        call = self.calls[0]
+        self.assertEqual(call["json"]["state"], {"origin": "NYC", "decided": {"where": "Guatemala"}})
+        self.assertEqual(call["headers"]["apikey"], "test-secret")
+
+    def test_load_returns_saved_trip(self):
+        self.reply = [{"state": {"origin": "NYC"}}]
+        res = self.client.get(f"/api/trips/{self.TRIP_ID}")
+        self.assertEqual(res.get_json(), {"trip": {"origin": "NYC"}})
+        self.assertEqual(self.calls[0]["params"]["id"], f"eq.{self.TRIP_ID}")
+
+    def test_unknown_trip_is_404(self):
+        self.reply = []
+        self.assertEqual(self.client.get(f"/api/trips/{self.TRIP_ID}").status_code, 404)
+        self.assertEqual(self.client.put(f"/api/trips/{self.TRIP_ID}", json={"trip": {}}).status_code, 404)
+
+    def test_non_uuid_id_never_reaches_database(self):
+        # e.g. trying to smuggle a PostgREST filter through the id
+        for bad in ["1", "abc", "x,or=(id.neq.0)", "../trips"]:
+            self.assertEqual(self.client.get(f"/api/trips/{bad}").status_code, 404, bad)
+        self.assertEqual(self.calls, [])
+
+    def test_missing_trip_is_400(self):
+        self.assertEqual(self.client.post("/api/trips", json={"nope": 1}).status_code, 400)
+        self.assertEqual(self.calls, [])
+
+    def test_saving_off_without_keys(self):
+        self.app_module.SUPABASE_SECRET_KEY = ""
+        res = self.client.post("/api/trips", json={"trip": {}})
+        self.assertEqual(res.status_code, 503)
+        self.assertTrue(res.get_json()["saving_off"])
+
+    def test_database_error_is_friendly_502(self):
+        import requests
+        self.req.stop()
+        from unittest import mock
+        self.req = mock.patch.object(self.app_module.requests, "request", side_effect=requests.ConnectionError("down"))
+        self.req.start()
+        res = self.client.put(f"/api/trips/{self.TRIP_ID}", json={"trip": {}})
+        self.assertEqual(res.status_code, 502)
+        self.assertNotIn("down", res.get_json()["error"])
+
+    def test_trip_writes_are_rate_limited(self):
+        self.reply = [{"id": self.TRIP_ID}]
+        codes = [self.client.post("/api/trips", json={"trip": {}}).status_code for _ in range(40)]
+        self.assertIn(429, codes)
+        self.assertEqual(codes[-1], 429)
+
+
+class PreviewUsesDevDatabaseTest(unittest.TestCase):
+    """PR previews must never get the prod database keys."""
+
+    def load_app_with(self, env):
+        import importlib
+        import os
+        from unittest import mock
+        import app as app_module
+        with mock.patch.dict(os.environ, env, clear=False):
+            return importlib.reload(app_module)
+
+    def tearDown(self):
+        import importlib
+        import app as app_module
+        importlib.reload(app_module)
+
+    def test_preview_uses_dev_keys(self):
+        env = {"IS_PULL_REQUEST": "true", "SUPABASE_URL": "https://prod.supabase.co", "SUPABASE_SECRET_KEY": "prod",
+               "SUPABASE_DEV_URL": "https://dev.supabase.co", "SUPABASE_DEV_SECRET_KEY": "dev"}
+        m = self.load_app_with(env)
+        self.assertEqual((m.SUPABASE_URL, m.SUPABASE_SECRET_KEY), ("https://dev.supabase.co", "dev"))
+
+    def test_preview_without_dev_keys_saves_nothing(self):
+        env = {"IS_PULL_REQUEST": "true", "SUPABASE_URL": "https://prod.supabase.co", "SUPABASE_SECRET_KEY": "prod",
+               "SUPABASE_DEV_URL": "", "SUPABASE_DEV_SECRET_KEY": ""}
+        m = self.load_app_with(env)
+        self.assertEqual(m.SUPABASE_SECRET_KEY, "")
+
+    def test_production_uses_prod_keys(self):
+        env = {"IS_PULL_REQUEST": "false", "SUPABASE_URL": "https://prod.supabase.co", "SUPABASE_SECRET_KEY": "prod"}
+        self.assertEqual(self.load_app_with(env).SUPABASE_SECRET_KEY, "prod")

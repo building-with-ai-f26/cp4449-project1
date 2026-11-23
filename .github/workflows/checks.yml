@@ -20,7 +20,7 @@ jobs:
         run: pip-audit -r requirements.txt
       - name: Secret scan
         run: |
-          if git grep -nE 'sk-or-v1-[0-9a-f]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sk_live_[A-Za-z0-9]{10,}|sb_secret_|service_role' -- . ':!.github/workflows/checks.yml' ':!SECURITY.md'; then
+          if git grep -nE 'sk-or-v1-[0-9a-f]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sk_live_[A-Za-z0-9]{10,}|sb_secret_[A-Za-z0-9_-]{20,}|eyJhbGciOi[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{20,}' -- . ':!.github/workflows/checks.yml' ':!SECURITY.md'; then
             echo "Possible secret committed. Remove it and rotate the key." && exit 1
           fi
           echo "No secrets found."

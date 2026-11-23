@@ -10,13 +10,16 @@ Run:  python3 app.py   then open http://localhost:5050
 
 import json
 import os
+import uuid
+from datetime import datetime, timezone
+from functools import wraps
 
 import requests
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, NotFound
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()  # reads OPENROUTER_API_KEY (and optional OPENROUTER_MODEL) from .env
@@ -306,6 +309,99 @@ def run(prompt):
         # Log the details on the server; don't show internals to visitors.
         print(f"[ai] error: {type(e).__name__}: {e}")
         return jsonify({"error": "Something went wrong on our side. Try again."}), 500
+
+
+# ---------- Saved trips (Supabase, no sign-in) ----------
+# The browser never talks to the database. Only this server does, with the secret key from .env / Render.
+# Row Level Security is ON for the trips table with no policies, so the public key can't read or write anything.
+# A trip is found by its random UUID, so the link is the only way to open it (like an unlisted doc).
+
+# Render sets IS_PULL_REQUEST=true on PR preview deploys. Previews must never touch the prod database,
+# so they use the DEV project's keys (SUPABASE_DEV_*), or save nothing if those aren't set.
+IS_PREVIEW = os.getenv("IS_PULL_REQUEST") == "true"
+SUPABASE_URL = os.getenv("SUPABASE_DEV_URL" if IS_PREVIEW else "SUPABASE_URL", "").rstrip("/")
+SUPABASE_SECRET_KEY = os.getenv("SUPABASE_DEV_SECRET_KEY" if IS_PREVIEW else "SUPABASE_SECRET_KEY", "")
+TRIP_LIMIT = os.getenv("TRIP_RATE_LIMIT", "30 per minute;500 per hour")
+trip_limit = limiter.shared_limit(TRIP_LIMIT, scope="trips")
+TRIP_KEYS = {"origin", "notes", "ideas", "decided", "prefs", "rejected"}
+
+
+def db(method, params=None, body=None, prefer=None):
+    """One call to the Supabase REST API for the trips table. Raises on HTTP errors."""
+    if not SUPABASE_URL or not SUPABASE_SECRET_KEY:
+        raise RuntimeError("Saving is turned off on this server.")  # don't tell visitors our env var names
+    headers = {"apikey": SUPABASE_SECRET_KEY, "Content-Type": "application/json"}
+    if prefer:
+        headers["Prefer"] = prefer
+    res = requests.request(method, f"{SUPABASE_URL}/rest/v1/trips", headers=headers,
+                           params=params, json=body, timeout=10)
+    res.raise_for_status()
+    return res.json() if res.content else []
+
+
+def trip_id_or_404(trip_id):
+    """Only accept real UUIDs, so nothing else can reach the database query."""
+    try:
+        return str(uuid.UUID(trip_id))
+    except ValueError:
+        raise NotFound()
+
+
+def clean_trip(body):
+    """Keep only the trip fields the page uses. Anything else in the request is dropped."""
+    trip = (body or {}).get("trip")
+    if not isinstance(trip, dict):
+        raise BadRequest("Missing trip.")
+    return {k: v for k, v in trip.items() if k in TRIP_KEYS}
+
+
+def saving(fn):
+    """Turn database problems into friendly JSON errors (and keep details in the server log)."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except RuntimeError as e:
+            return jsonify({"error": str(e), "saving_off": True}), 503
+        except requests.RequestException as e:
+            print(f"[db] error: {type(e).__name__}: {e}")
+            return jsonify({"error": "Couldn't save your trip right now. Your work is still on this page."}), 502
+    return wrapper
+
+
+@app.post("/api/trips")
+@trip_limit
+@saving
+def create_trip():
+    rows = db("POST", body={"state": clean_trip(request.get_json())}, prefer="return=representation")
+    return jsonify({"id": rows[0]["id"]}), 201
+
+
+@app.get("/api/trips/<trip_id>")
+@trip_limit
+@saving
+def load_trip(trip_id):
+    rows = db("GET", params={"id": f"eq.{trip_id_or_404(trip_id)}", "select": "state"})
+    if not rows:
+        raise NotFound()
+    return jsonify({"trip": rows[0]["state"]})
+
+
+@app.put("/api/trips/<trip_id>")
+@trip_limit
+@saving
+def save_trip(trip_id):
+    rows = db("PATCH", params={"id": f"eq.{trip_id_or_404(trip_id)}", "select": "id"},
+              body={"state": clean_trip(request.get_json()), "updated_at": datetime.now(timezone.utc).isoformat()},
+              prefer="return=representation")
+    if not rows:  # no trip with that id: don't pretend it saved
+        raise NotFound()
+    return jsonify({"ok": True})
+
+
+@app.errorhandler(NotFound)
+def not_found(e):
+    return jsonify({"error": "Not found."}), 404
 
 
 if __name__ == "__main__":
