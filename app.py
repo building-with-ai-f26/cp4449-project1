@@ -316,8 +316,11 @@ def run(prompt):
 # Row Level Security is ON for the trips table with no policies, so the public key can't read or write anything.
 # A trip is found by its random UUID, so the link is the only way to open it (like an unlisted doc).
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
-SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")
+# Render sets IS_PULL_REQUEST=true on PR preview deploys. Previews must never touch the prod database,
+# so they use the DEV project's keys (SUPABASE_DEV_*), or save nothing if those aren't set.
+IS_PREVIEW = os.getenv("IS_PULL_REQUEST") == "true"
+SUPABASE_URL = os.getenv("SUPABASE_DEV_URL" if IS_PREVIEW else "SUPABASE_URL", "").rstrip("/")
+SUPABASE_SECRET_KEY = os.getenv("SUPABASE_DEV_SECRET_KEY" if IS_PREVIEW else "SUPABASE_SECRET_KEY", "")
 TRIP_LIMIT = os.getenv("TRIP_RATE_LIMIT", "30 per minute;500 per hour")
 trip_limit = limiter.shared_limit(TRIP_LIMIT, scope="trips")
 TRIP_KEYS = {"origin", "notes", "ideas", "decided", "prefs", "rejected"}

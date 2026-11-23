@@ -233,3 +233,36 @@ class SavedTripsTest(unittest.TestCase):
         codes = [self.client.post("/api/trips", json={"trip": {}}).status_code for _ in range(40)]
         self.assertIn(429, codes)
         self.assertEqual(codes[-1], 429)
+
+
+class PreviewUsesDevDatabaseTest(unittest.TestCase):
+    """PR previews must never get the prod database keys."""
+
+    def load_app_with(self, env):
+        import importlib
+        import os
+        from unittest import mock
+        import app as app_module
+        with mock.patch.dict(os.environ, env, clear=False):
+            return importlib.reload(app_module)
+
+    def tearDown(self):
+        import importlib
+        import app as app_module
+        importlib.reload(app_module)
+
+    def test_preview_uses_dev_keys(self):
+        env = {"IS_PULL_REQUEST": "true", "SUPABASE_URL": "https://prod.supabase.co", "SUPABASE_SECRET_KEY": "prod",
+               "SUPABASE_DEV_URL": "https://dev.supabase.co", "SUPABASE_DEV_SECRET_KEY": "dev"}
+        m = self.load_app_with(env)
+        self.assertEqual((m.SUPABASE_URL, m.SUPABASE_SECRET_KEY), ("https://dev.supabase.co", "dev"))
+
+    def test_preview_without_dev_keys_saves_nothing(self):
+        env = {"IS_PULL_REQUEST": "true", "SUPABASE_URL": "https://prod.supabase.co", "SUPABASE_SECRET_KEY": "prod",
+               "SUPABASE_DEV_URL": "", "SUPABASE_DEV_SECRET_KEY": ""}
+        m = self.load_app_with(env)
+        self.assertEqual(m.SUPABASE_SECRET_KEY, "")
+
+    def test_production_uses_prod_keys(self):
+        env = {"IS_PULL_REQUEST": "false", "SUPABASE_URL": "https://prod.supabase.co", "SUPABASE_SECRET_KEY": "prod"}
+        self.assertEqual(self.load_app_with(env).SUPABASE_SECRET_KEY, "prod")

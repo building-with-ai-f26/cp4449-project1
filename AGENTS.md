@@ -26,6 +26,7 @@
 | `POSTHOG_HOST` | No | Defaults to `https://us.i.posthog.com`. |
 | `SUPABASE_URL` | No | Supabase project URL. **Local = dev project, Render = prod project.** Blank = saving off. |
 | `SUPABASE_SECRET_KEY` | No | Secret (`sb_secret_…`). Server only; bypasses RLS. Never in the browser, git, or chat. |
+| `SUPABASE_DEV_URL` / `SUPABASE_DEV_SECRET_KEY` | Render only | Dev project keys used by **PR previews** (Render sets `IS_PULL_REQUEST=true`), so previews never touch prod. |
 | `TRIP_RATE_LIMIT` | No | Per-visitor limit on trip load/save. Defaults to `30 per minute;500 per hour`. |
 | `AI_RATE_LIMIT` | No | Per-visitor limit on AI routes. Defaults to `10 per minute;60 per hour`. |
 | `PROXY_HOPS` | No | Proxies in front of the app (Cloudflare + Render = 3). Only change if Render changes its setup. |

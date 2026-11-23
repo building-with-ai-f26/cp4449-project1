@@ -27,8 +27,12 @@ services:
       - key: POSTHOG_HOST
         value: https://us.i.posthog.com
       # PROD Supabase project (nextstop-prod). Dev values live only in your local .env.
-      # Note: PR previews also use these, so a preview reads/writes prod trips. Keep previews short-lived.
+      # PR previews (IS_PULL_REQUEST=true) ignore these and use SUPABASE_DEV_* instead, so they never touch prod.
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SECRET_KEY
         sync: false   # secret: server only
+      - key: SUPABASE_DEV_URL
+        sync: false   # DEV project, used only by PR previews
+      - key: SUPABASE_DEV_SECRET_KEY
+        sync: false
