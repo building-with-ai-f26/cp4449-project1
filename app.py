@@ -329,7 +329,7 @@ TRIP_KEYS = {"origin", "notes", "ideas", "decided", "prefs", "rejected"}
 def db(method, params=None, body=None, prefer=None):
     """One call to the Supabase REST API for the trips table. Raises on HTTP errors."""
     if not SUPABASE_URL or not SUPABASE_SECRET_KEY:
-        raise RuntimeError("Saving is off: SUPABASE_URL / SUPABASE_SECRET_KEY are not set.")
+        raise RuntimeError("Saving is turned off on this server.")  # don't tell visitors our env var names
     headers = {"apikey": SUPABASE_SECRET_KEY, "Content-Type": "application/json"}
     if prefer:
         headers["Prefer"] = prefer
