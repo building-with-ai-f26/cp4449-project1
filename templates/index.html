@@ -135,7 +135,8 @@
       .panel { padding: 22px 18px; }
       .next-item { flex-direction: column; align-items: stretch; }
     }
-  </style>
+      .saved-status { font-size: 13px; color: var(--muted); margin-right: 8px; }
+</style>
   {% if posthog_key %}
   <!-- PostHog analytics: pageviews, clicks (autocapture), and session replay. Key comes from .env. -->
   <script>
@@ -148,7 +149,7 @@
 <div class="container">
   <header>
     <div class="logo"><span class="logo-mark" aria-hidden="true">✈︎</span><div>next<span>stop</span></div></div>
-    <button class="link-btn" onclick="startOver()">Start over</button>
+    <div><span id="saved" class="saved-status"></span> <button class="link-btn" onclick="startOver()">Start over</button></div>
   </header>
 
   <div class="progress">
@@ -170,7 +171,8 @@
                  transport: "✈️", stay: "🛏️", activities: "🥾" };
   const icon = (k) => `<span class="icon" aria-hidden="true">${ICON[k] || ""}</span>`;
 
-  // The whole trip lives here in the browser. The server never stores it.
+  // The trip lives here in the browser and is autosaved to the server (Supabase) under a private random id.
+  // The id is kept in this browser (localStorage) and in the link (?trip=...), so the trip comes back on refresh.
   // ideas   = rough starting ideas from the first page, e.g. ideas.when = "mid-April" (not decided yet).
   // decided = what the traveler has locked in, one decision at a time.
   // prefs   = what the traveler wants going into each decision, e.g. prefs.stay = "quiet, kitchen".
@@ -215,6 +217,7 @@
   }
 
   function renderChips() {
+    scheduleSave();
     $("chips").innerHTML = Object.keys(CATEGORIES).map(k => {
       // Three states: locked (green), being decided (teal), or just an idea so far (dashed).
       const val = trip.decided[k];
@@ -226,6 +229,75 @@
       if (idea) return `<span class="chip idea" title="Starting idea, not locked yet">${icon(k)}${SHORT[k]}<span class="tag">· idea: ${esc(idea)}</span></span>`;
       return `<span class="chip">${icon(k)}${SHORT[k]}${pref}</span>`;
     }).join("");
+  }
+
+  // ---------- Saving (no sign-in: the private link is the key to the trip) ----------
+  let tripId = null;
+  let savingOff = false;     // the server has no database configured (e.g. local dev): just don't save
+  let lastSaved = "";
+  let saveTimer = null;
+  const isEmpty = (t) => !t.origin && !t.notes && !Object.keys(t.ideas).length && !Object.keys(t.decided).length
+                         && !Object.keys(t.prefs).length;
+  const store = { get: () => { try { return localStorage.getItem("nextstop.tripId"); } catch { return null; } },
+                  set: (v) => { try { v ? localStorage.setItem("nextstop.tripId", v) : localStorage.removeItem("nextstop.tripId"); } catch {} } };
+
+  function setTripId(id) {
+    tripId = id;
+    store.set(id);
+    const url = new URL(location.href);
+    id ? url.searchParams.set("trip", id) : url.searchParams.delete("trip");
+    history.replaceState(null, "", url);
+  }
+
+  // Called after every change (from renderChips). Waits a moment so quick edits become one save.
+  function scheduleSave() {
+    if (savingOff) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 800);
+  }
+
+  async function saveNow() {
+    const body = JSON.stringify({ trip });
+    if (body === lastSaved || (!tripId && isEmpty(trip))) return;  // nothing new; don't create empty trips
+    $("saved").textContent = "Saving…";
+    try {
+      const res = await fetch(tripId ? `/api/trips/${tripId}` : "/api/trips",
+                              { method: tripId ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body });
+      const data = await res.json().catch(() => ({}));
+      if (data.saving_off) { savingOff = true; $("saved").textContent = ""; return; }
+      if (res.status === 404 && tripId) { setTripId(null); return saveNow(); }  // trip was removed: start a new one
+      if (!res.ok) throw new Error(data.error || "Couldn't save");
+      if (!tripId) setTripId(data.id);
+      lastSaved = body;
+      $("saved").textContent = "Saved ✓";
+    } catch (err) {
+      $("saved").textContent = "Not saved (retrying)";
+      console.warn("[save]", err);
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveNow, 15000);
+    }
+  }
+
+  // On page load: reopen the trip from the link, or from this browser's last trip.
+  async function loadTrip() {
+    const id = new URL(location.href).searchParams.get("trip") || store.get();
+    if (id) {
+      try {
+        const res = await fetch(`/api/trips/${encodeURIComponent(id)}`);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.trip) {
+          trip = { ...emptyTrip(), ...data.trip };
+          setTripId(id);
+          lastSaved = JSON.stringify({ trip });
+          $("saved").textContent = "Saved ✓";
+        } else if (data.saving_off) {
+          savingOff = true;
+        } else if (res.status === 404) {
+          setTripId(null);  // old or mistyped link: start fresh
+        }
+      } catch (err) { console.warn("[load]", err); }
+    }
+    openCategories().length === 0 ? (renderChips(), showDone()) : showKnowns();
   }
 
   // ---------- Screen 1: what do you know? ----------
@@ -491,11 +563,15 @@
   }
 
   function startOver() {
+    // A new trip gets a new private link. The old trip stays saved under its old link.
     trip = emptyTrip();
+    setTripId(null);
+    lastSaved = "";
+    $("saved").textContent = "";
     showKnowns();
   }
 
-  showKnowns();
+  loadTrip();
 </script>
 </body>
 </html>
