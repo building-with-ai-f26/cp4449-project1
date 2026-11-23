@@ -52,7 +52,7 @@ docs/index.html        Product Page + living PRD + build log, served by GitHub P
 docs/images/           Screenshots and workflow diagrams used on the Product Page
 journal/, Plan.md      Optional course scratch notes (not the source of truth; docs/index.html is)
 ```
-**Data flow for one action:** browser sends `trip` + the decision → `app.py` turns it into text with `describe_trip()` → OpenRouter → JSON reply is cleaned, parsed (one retry on bad JSON) → page renders cards/table. No database; nothing is stored server-side.
+**Data flow for one action:** browser sends `trip` + the decision → `app.py` turns it into text with `describe_trip()` → OpenRouter → JSON reply is cleaned, parsed (one retry on bad JSON) → page renders cards/table. Saving: 800 ms after each change the page PUTs the trip to `/api/trips/<uuid>`, and Flask writes it to Supabase with the secret key.
 
 **Analytics:** PostHog (pageviews, autocapture clicks, session replay) runs on both the local app and the Product Page.
 
