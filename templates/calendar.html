@@ -8,112 +8,101 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #f5f5f4; --card: #fff; --text: #1f2a2e; --muted: #6b7570; --line: #2b2b2b; --soft-line: #d6d3d1;
+      --bg: #f6f5f3; --card: #fff; --text: #1c2526; --muted: #78716c; --faint: #a8a29e;
+      --line: #e7e5e4; --line-strong: #d6d3d1; --field: #fafaf9;
       --accent: #0f766e; --accent-dark: #115e59; --accent-soft: #e6f4f1;
       --warn-text: #9a3f12; --warn-bg: #fff4e6; --flag: #e5533d;
-      --col-h: 560px;
+      --radius: 14px; --shadow: 0 1px 2px rgba(28,25,23,.04), 0 2px 8px rgba(28,25,23,.04);
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
            color: var(--text); line-height: 1.45; -webkit-font-smoothing: antialiased;
-           /* dotted canvas, like the Figma board */
-           background: var(--bg) radial-gradient(#cfcac4 1px, transparent 1px) 0 0 / 18px 18px; }
-    header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px 6px; gap: 12px; }
+           background: var(--bg) radial-gradient(#dedad5 1px, transparent 1px) 0 0 / 20px 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px 10px; gap: 12px; flex-wrap: wrap; }
     .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
     .logo span { color: var(--accent); }
     .logo .logo-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 15px; }
-    .header-links { display: flex; gap: 16px; align-items: center; }
-    .link-btn { background: none; border: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px;
-                font-weight: 600; text-decoration: underline; text-underline-offset: 3px; padding: 2px; }
+    .header-links { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+    .link-btn { background: none; border: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; padding: 2px; }
     .link-btn:hover { color: var(--accent); }
-    #error { padding: 0 24px; }
+    #error { padding: 0 28px; }
     .error { background: #fdecec; color: #991b1b; border: 1px solid #f5c2c2; border-radius: 10px; padding: 8px 12px; font-weight: 600; font-size: 14px; }
 
-    /* One horizontal board, like the mockup: High level | days | Budget */
-    .board { display: flex; gap: 22px; align-items: flex-start; overflow-x: auto; padding: 20px 24px 100px; }
-    .col { flex: 0 0 auto; width: 190px; height: var(--col-h); background: var(--card); border: 1px solid var(--line);
-           padding: 14px 12px; font-size: 13px; position: relative; display: flex; flex-direction: column; gap: 8px; }
-    .col.hl { margin-top: 64px; height: calc(var(--col-h) - 64px); }
-    .col .scroll { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; }
-    .col-title { text-align: center; font-weight: 800; font-size: 13.5px; }
-    .col-note { text-align: center; color: var(--muted); font-size: 11.5px; }
-    .col.wide { width: 230px; }
-    .lbl { font-weight: 800; font-size: 12.5px; }
-    .topic { display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; border-bottom: 1px dashed var(--soft-line); }
-    .topic:last-child { border-bottom: none; }
-    .topic-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-    .topic-state { font-size: 10.5px; font-weight: 700; color: var(--muted); }
-    .stages { display: flex; gap: 3px; }
-    .stages button { flex: 1; font: inherit; font-size: 10.5px; font-weight: 700; padding: 2px 0; border-radius: 4px; cursor: pointer;
-                     border: 1px solid var(--soft-line); background: #fff; color: var(--muted); }
-    .stages button:hover { border-color: var(--line); }
-    .stages button.on.s1 { background: #f5f5f4; border-color: #a8a29e; color: #57534e; }
-    .stages button.on.s2 { background: #fff4e6; border-color: #d97706; color: #9a3f12; }
-    .stages button.on.s3 { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
-    textarea, input[type=text], input[type=date] { width: 100%; font: inherit; font-size: 12.5px; border: 1px solid var(--soft-line);
-      border-radius: 4px; padding: 5px 7px; background: #fff; color: var(--text); resize: vertical; }
-    textarea:focus, input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    /* Page: High level on the left (full height, no inner scroll) | days + budget scroll sideways */
+    .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; padding: 8px 28px 40px; align-items: start; }
+    @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); padding: 8px 16px 40px; } header { padding: 16px 16px 8px; } }
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .col-title { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .board { display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 16px; }
+
+    /* High level */
+    #hl { padding: 18px 18px 6px; position: sticky; top: 12px; }
+    .topic { padding: 10px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+    .topic:first-of-type { border-top: none; padding-top: 0; }
+    .topic-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .lbl { font-weight: 800; font-size: 13.5px; }
+    #hl textarea { overflow: hidden; }
+    textarea, input[type=text] { width: 100%; font: inherit; font-size: 13px; border: 1px solid transparent; border-radius: 8px;
+      padding: 6px 9px; background: var(--field); color: var(--text); resize: none; }
+    textarea:hover, input[type=text]:hover { border-color: var(--line); }
+    textarea:focus, input:focus { outline: none; background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    textarea::placeholder, input::placeholder { color: var(--faint); }
+    /* Stage: one segmented control */
+    .stages { display: flex; flex: 0 0 auto; background: #f1f0ee; border-radius: 7px; padding: 2px; gap: 1px; }
+    .stages button { font: inherit; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; cursor: pointer;
+                     border: none; background: transparent; color: var(--muted); }
+    .stages button:hover { color: var(--text); }
+    .stages button.on { box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .stages button.on.s1 { background: #fff; color: #57534e; }
+    .stages button.on.s2 { background: #fde9cc; color: #9a3f12; }
+    .stages button.on.s3 { background: #cdebe5; color: var(--accent-dark); }
 
     /* Days */
-    .days { display: flex; gap: 12px; align-items: flex-start; }
-    .daycol { width: 120px; display: flex; flex-direction: column; gap: 6px; }
-    .pill { border: 1px solid var(--line); background: #fff; text-align: center; font-size: 12px; padding: 3px 4px; }
-    .pill.date { color: var(--muted); }
-    .pill.leg { border-style: dashed; color: var(--accent-dark); font-weight: 700; font-size: 11px; }
-    .cards { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
-    .card { background: #fff; border: 1px solid var(--line); min-height: 64px; padding: 8px 18px 8px 8px; font-size: 12px;
-            display: flex; flex-direction: column; justify-content: center; text-align: center; position: relative; }
-    .card .part { color: var(--muted); font-size: 10.5px; }
-    .card .w { color: var(--warn-text); font-size: 10.5px; margin-top: 3px; }
-    .card .x { position: absolute; top: 2px; right: 3px; border: none; background: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 0 2px; opacity: 0; }
+    .days { display: flex; gap: 10px; align-items: flex-start; }
+    .daycol { width: 150px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
+    .dhead { padding: 10px 12px; }
+    .dhead .d { font-weight: 800; font-size: 14px; }
+    .dhead .date { color: var(--muted); font-size: 12px; }
+    .leg { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 99px; }
+    .cards { display: flex; flex-direction: column; gap: 8px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 9px 22px 9px 11px; font-size: 12.5px; position: relative; box-shadow: var(--shadow); }
+    .card .part { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .card .w { color: var(--warn-text); font-size: 11px; margin-top: 4px; font-weight: 700; }
+    .card .x { position: absolute; top: 5px; right: 5px; border: none; background: none; color: var(--faint); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; opacity: 0; }
     .card:hover .x { opacity: 1; }
     .card .x:hover { color: var(--flag); }
-    .card.custom { border-style: dashed; }
-    .add-own { font-size: 11.5px; text-align: center; }
-    .daytools { display: flex; justify-content: space-between; }
-    .daytools .link-btn { font-size: 10.5px; }
-    .add-day { width: 90px; height: 120px; margin-top: 64px; border: 1px dashed var(--line); background: rgba(255,255,255,.6);
-               display: grid; place-items: center; cursor: pointer; font-weight: 800; color: var(--accent-dark); font-size: 13px; }
-    .add-day:hover { background: var(--accent-soft); }
-    .empty-days { width: 240px; margin-top: 64px; color: var(--muted); font-size: 13px; text-align: center; padding: 20px; border: 1px dashed var(--soft-line); background: rgba(255,255,255,.6); }
+    .card.custom { border-style: dashed; box-shadow: none; }
+    .card.flight { background: #f3f8ff; border-color: #dbe7f7; }
+    .add-own { font-size: 12px; background: transparent; border: 1px dashed var(--line-strong); }
+    .daytools { display: flex; justify-content: space-between; opacity: 0; transition: opacity .15s; }
+    .daycol:hover .daytools { opacity: 1; }
+    .daytools .link-btn { font-size: 11px; font-weight: 600; }
+    .add-day { width: 64px; flex: 0 0 auto; align-self: stretch; min-height: 80px; border: 1px dashed var(--line-strong); border-radius: var(--radius);
+               display: grid; place-items: center; cursor: pointer; font-weight: 800; color: var(--muted); font-size: 12.5px; text-align: center; }
+    .add-day:hover { background: var(--accent-soft); color: var(--accent-dark); border-color: var(--accent); }
+    .empty-days { width: 240px; color: var(--muted); font-size: 13px; text-align: center; padding: 24px; border: 1px dashed var(--line-strong); border-radius: var(--radius); }
 
-    /* Sandbox */
-    .leg { margin-bottom: 4px; }
-    .leg-name { font-weight: 800; }
-    .leg-meta { color: var(--muted); font-size: 11px; }
-    .sb { list-style: disc; margin: 4px 0 0; padding-left: 16px; }
-    .sb li { margin-bottom: 6px; }
-    .sb .meta { color: var(--muted); font-size: 11px; }
-    .sb .w { color: var(--warn-text); font-size: 11px; }
-    select { font: inherit; font-size: 11px; border: 1px solid var(--accent); color: var(--accent-dark); background: #fff; border-radius: 4px; padding: 1px 4px; margin-top: 2px; cursor: pointer; max-width: 100%; }
-    .btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 7px 10px; font: inherit; font-weight: 800; font-size: 12.5px; cursor: pointer; }
-    .btn:hover:not(:disabled) { background: var(--accent-dark); }
-    .btn:disabled { opacity: .5; cursor: wait; }
-    .btn-line { background: #fff; color: var(--accent-dark); border: 1px solid var(--accent); }
-    .btn-line:hover:not(:disabled) { background: var(--accent-soft); }
-    .btn-tiny { padding: 2px 7px; font-size: 11px; border-radius: 4px; }
+    /* Budget */
+    #budget { flex: 0 0 auto; width: 260px; padding: 18px; position: relative; font-size: 13px; }
+    .big-total { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+    .of { color: var(--muted); font-size: 12.5px; margin: 2px 0 10px; }
+    .bar { height: 6px; background: #f1f0ee; border-radius: 99px; overflow: hidden; margin-bottom: 14px; }
+    .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+    .bar.over i { background: var(--flag); }
+    .group { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 12px 0 4px; }
+    .row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+    .row .m { color: var(--muted); font-size: 11.5px; }
+    .tbd { color: var(--faint); }
+    .hint { color: var(--muted); font-size: 12px; }
 
-    /* Budget / flights / status */
-    .row { display: flex; justify-content: space-between; gap: 8px; }
-    .row .m { color: var(--muted); font-size: 11px; }
-    .total { border-top: 1px solid var(--line); padding-top: 6px; font-weight: 800; font-size: 14px; }
-    .tbd { color: #a8a29e; }
-    .status-big { font-size: 13.5px; }
-    .hint { color: var(--muted); font-size: 11.5px; }
-    .w-box { color: var(--warn-text); background: var(--warn-bg); padding: 5px 7px; font-size: 11.5px; }
-
-    /* Ripple flags: the red diamonds from the mockup */
-    .col.flagged { border-color: var(--flag); box-shadow: 0 0 0 1px var(--flag); }
+    /* Ripple flags (from "Save this version") */
+    .flagged { border-color: var(--flag) !important; box-shadow: 0 0 0 1px var(--flag) !important; }
     .diamond { position: absolute; left: 50%; bottom: -58px; width: 132px; height: 132px; margin-left: -66px; z-index: 2;
                background: var(--flag); transform: rotate(45deg); display: grid; place-items: center; box-shadow: 0 6px 18px rgba(229,83,61,.35); }
     .diamond span { transform: rotate(-45deg); color: #fff; font-size: 11px; font-weight: 800; text-align: center; width: 120px; line-height: 1.25; }
-    .diamond.small { width: 104px; height: 104px; margin-left: -52px; }
-    .diamond.small span { width: 92px; }
-    .note { font-size: 12px; color: var(--muted); text-align: center; margin: -60px 0 30px; }
-    .flag-list { color: #b42d18; font-weight: 700; font-size: 11.5px; border-bottom: 1px dashed var(--flag); padding-bottom: 6px; }
+    .flag-list { color: #b42d18; font-weight: 700; font-size: 12px; border-bottom: 1px dashed var(--flag); padding-bottom: 6px; }
     .flag-list ul { margin: 2px 0 0; padding-left: 14px; }
-    .spinner { display: inline-block; width: 11px; height: 11px; border: 2px solid rgba(255,255,255,.5); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 5px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .note { font-size: 12px; color: var(--faint); text-align: center; margin: 0 0 30px; }
   </style>
   {% if posthog_key %}
   <script>
@@ -133,10 +122,12 @@
   </header>
   <div id="error"></div>
 
-  <div class="board">
-    <div class="col hl wide" id="hl"></div>
-    <div class="days" id="days"></div>
-    <div class="col wide" id="budget"></div>
+  <div class="layout">
+    <aside class="panel" id="hl"></aside>
+    <div class="board">
+      <div class="days" id="days"></div>
+      <section class="panel" id="budget"></section>
+    </div>
   </div>
   <p class="note">Costs and travel times are AI estimates, not live prices. Double-check before booking.</p>
 
@@ -207,7 +198,7 @@
   const money = (n) => "$" + Math.round(n).toLocaleString();
   const signed = (n) => (n > 0 ? "+" : "−") + money(Math.abs(n));
   // A text box bound to a plan field (re-renders the parts that depend on it).
-  const box = (k, ph, rows = 2) => `<textarea rows="${rows}" placeholder="${esc(ph)}" oninput="plan['${k}'] = this.value; save()">${esc(plan[k])}</textarea>`;
+  const box = (k, ph, rows = 2) => `<textarea rows="${rows}" placeholder="${esc(ph)}" oninput="plan['${k}'] = this.value; grow(this); save(); renderBudget()">${esc(plan[k])}</textarea>`;
 
   function load() {
     try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.days)) return { ...emptyPlan(), ...s, stages: s.stages || {} }; } catch (e) {}
@@ -220,7 +211,15 @@
     if (!plan.startDate) return "";
     const d = new Date(plan.startDate + "T12:00:00");
     d.setDate(d.getDate() + i);
-    return d.toLocaleDateString(undefined, { month: "long", day: "numeric" }).toLowerCase();
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  }
+
+  // Each stop gets its own soft color, in the order it first appears.
+  const LEG_COLORS = [["#fef3c7", "#92400e"], ["#cffafe", "#155e75"], ["#dcfce7", "#166534"], ["#fce7f3", "#9d174d"], ["#e0e7ff", "#3730a3"]];
+  function legStyle(leg) {
+    const order = [...new Set(plan.days.map((_, i) => dayLeg(i)).filter(Boolean))];
+    const [bg, fg] = LEG_COLORS[Math.max(0, order.indexOf(leg)) % LEG_COLORS.length];
+    return `background:${bg};color:${fg}`;
   }
 
   // Where you sleep on day i = the leg of the last item that day; otherwise carry over from the day before.
@@ -282,19 +281,22 @@
   // Columns with text boxes are drawn once (so typing isn't interrupted).
   function renderStatic() {
     $("hl").innerHTML = `
-      <div class="col-title">HIGH LEVEL</div>
-      <div class="scroll">${TOPICS.map(([key, label, field, ph]) => {
+      <div class="col-title">High level</div>
+      ${TOPICS.map(([key, label, field, ph]) => {
         const st = plan.stages[key];
         return `
         <div class="topic">
-          <div class="topic-head"><span class="lbl">${label}:</span><span class="topic-state">${st ? "" : "Not started"}</span></div>
-          ${box(field, ph, 2)}
-          <div class="stages">${[1, 2, 3].map(n => `<button class="s${n} ${st === n ? "on" : ""}" title="${STAGE_NAME[n]}"
-            onclick="setStage('${key}', ${n})">${STAGE_SHORT[n]}</button>`).join("")}</div>
+          <div class="topic-head"><span class="lbl">${label}</span>
+            <div class="stages" title="${st ? STAGE_NAME[st] : "Not started"}">${[1, 2, 3].map(n => `<button class="s${n} ${st === n ? "on" : ""}" title="${STAGE_NAME[n]}"
+              onclick="setStage('${key}', ${n})">${STAGE_SHORT[n]}</button>`).join("")}</div>
+          </div>
+          ${box(field, ph, 1)}
         </div>`;
-      }).join("")}
-      </div>`;
+      }).join("")}`;
+    $("hl").querySelectorAll("textarea").forEach(grow);
   }
+  // Text boxes grow to fit what you type (no inner scrollbars).
+  function grow(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; }
 
   // Click a stage to set it; click the one that's already on to go back to "Not started".
   function setStage(key, n) {
@@ -314,11 +316,13 @@
         </div>`).join("");
       return `
         <div class="daycol">
-          <div class="pill date">${plan.startDate ? esc(dateFor(i)) : "&nbsp;"}</div>
-          <div class="pill">Day ${i + 1}</div>
-          ${leg ? `<div class="pill leg">${esc(leg)}</div>` : ""}
+          <div class="panel dhead">
+            <div class="d">Day ${i + 1}</div>
+            ${plan.startDate ? `<div class="date">${esc(dateFor(i))}</div>` : ""}
+            ${leg ? `<span class="leg" style="${legStyle(leg)}">${esc(leg)}</span>` : ""}
+          </div>
           <div class="cards">${cards}</div>
-          <input type="text" class="add-own" placeholder="+ add" onkeydown="if(event.key==='Enter'){addOwn(${i}, this.value)}" />
+          <input type="text" class="add-own" placeholder="+ add something" onkeydown="if(event.key==='Enter'){addOwn(${i}, this.value)}" />
           <div class="daytools">
             <button class="link-btn" onclick="insertDay(${i})">+ day after</button>
             <button class="link-btn" onclick="removeDay(${i})">remove</button>
@@ -326,7 +330,7 @@
         </div>`;
     }).join("");
     $("days").innerHTML = (cols || `<div class="empty-days">No days yet. Click <strong>+ day</strong> to start.</div>`) +
-      `<div class="add-day" onclick="insertDay(${plan.days.length - 1})">+ day</div>`;
+      `<div class="add-day" onclick="insertDay(${plan.days.length - 1})">+<br>day</div>`;
   }
 
   function diamond(text, small) { return `<div class="diamond ${small ? "small" : ""}"><span>${esc(text)}</span></div>`; }
@@ -336,23 +340,29 @@
     const f = flags().budget;
     const el = $("budget");
     el.classList.toggle("flagged", f.length > 0);
-    const stayLines = b.stays.map((s, i) => `
-      <div class="row"><span>Accommodation ${i + 1}: ${esc(s.leg)} <span class="m">${s.nights}n${s.nightly ? " × " + money(s.nightly) : ""}</span></span><span>${s.nightly ? money(s.cost) : "?"}</span></div>`).join("");
-    const actLines = b.extras.filter(it => it.kind !== "transport").map((it, i) => `
-      <div class="row"><span>Activity ${i + 1}: ${esc(it.title)}</span><span>${money(it.est_cost)}</span></div>`).join("");
-    const transLines = b.extras.filter(it => it.kind === "transport").map((it, i) => `
-      <div class="row"><span>Transportation ${i + 1}: ${esc(it.title)}</span><span>${money(it.est_cost)}</span></div>`).join("");
+    const line = (label, amount, meta = "") => `<div class="row"><span>${label}${meta ? ` <span class="m">${meta}</span>` : ""}</span><span class="${amount == null ? "tbd" : ""}">${amount == null ? "?" : money(amount)}</span></div>`;
+    const acts = b.extras.filter(it => it.kind !== "transport");
+    const trans = b.extras.filter(it => it.kind === "transport");
+    // Your budget number, pulled from the Budget text in High level ("~$1,200 total" -> 1200)
+    const m = String(plan.budget).replace(/,/g, "").match(/\d+/);
+    const target = m ? Number(m[0]) : 0;
+    const over = target && b.total > target;
     el.innerHTML = `
       <div class="col-title">Budget</div>
-      <div class="scroll">
-        ${f.length ? `<div class="flag-list">Since your saved version:<ul>${f.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
-        <div class="row total" style="border:none;padding:0"><span>Cost →</span><span>${b.days ? "~" + money(b.total) : "<span class='tbd'>TBD</span>"}</span></div>
-        <div class="row"><span>Flights:</span><span>${plan.flights ? money(b.flights) : "?"}</span></div>
-        ${stayLines || `<div class="row"><span>Accommodation:</span><span class="tbd">—</span></div>`}
-        ${actLines || `<div class="row"><span>Activities:</span><span class="tbd">—</span></div>`}
-        ${transLines || `<div class="row"><span>Transportation:</span><span class="tbd">—</span></div>`}
-        <div class="row"><span>Food: <span class="m">${b.days} days${plan.foodPerDay ? " × " + money(plan.foodPerDay) : ""}</span></span><span>${plan.foodPerDay ? money(b.food) : "?"}</span></div>
-      </div>
+      ${f.length ? `<div class="flag-list">Since your saved version:<ul>${f.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      <div class="big-total">${b.days ? "~" + money(b.total) : "<span class='tbd'>TBD</span>"}</div>
+      <div class="of">${target ? (over ? `${money(b.total - target)} over your ${money(target)}` : `${money(target - b.total)} left of ${money(target)}`) : "Add a budget in High level"}</div>
+      ${target ? `<div class="bar ${over ? "over" : ""}"><i style="width:${Math.min(100, b.total / target * 100)}%"></i></div>` : ""}
+      <div class="group">Flights</div>
+      ${line(plan.flights ? esc(plan.flights.route) : "Flights", plan.flights ? b.flights : null)}
+      <div class="group">Stays</div>
+      ${b.stays.map(s => line(esc(s.leg), s.nightly ? s.cost : null, `${s.nights}n${s.nightly ? " × " + money(s.nightly) : ""}`)).join("") || `<div class="row tbd">None yet</div>`}
+      <div class="group">Activities</div>
+      ${acts.map(it => line(esc(it.title), it.est_cost)).join("") || `<div class="row tbd">None yet</div>`}
+      <div class="group">Getting around</div>
+      ${trans.map(it => line(esc(it.title), it.est_cost)).join("") || `<div class="row tbd">None yet</div>`}
+      <div class="group">Food</div>
+      ${line("Food", plan.foodPerDay ? b.food : null, `${b.days} days${plan.foodPerDay ? " × " + money(plan.foodPerDay) : ""}`)}
       ${f.length ? diamond(`${b.total > (plan.saved ? plan.saved.total : 0) ? "MORE" : "LESS"} ACCOMMODATION / COST → ${money(b.total)}`) : ""}`;
   }
 
