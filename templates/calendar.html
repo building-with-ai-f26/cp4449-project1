@@ -29,7 +29,7 @@
     #error { padding: 0 24px; }
     .error { background: #fdecec; color: #991b1b; border: 1px solid #f5c2c2; border-radius: 10px; padding: 8px 12px; font-weight: 600; font-size: 14px; }
 
-    /* One horizontal board, like the mockup: High level | days | Budget | Flight details | Trip status */
+    /* One horizontal board, like the mockup: High level | days | Budget */
     .board { display: flex; gap: 22px; align-items: flex-start; overflow-x: auto; padding: 20px 24px 100px; }
     .col { flex: 0 0 auto; width: 190px; height: var(--col-h); background: var(--card); border: 1px solid var(--line);
            padding: 14px 12px; font-size: 13px; position: relative; display: flex; flex-direction: column; gap: 8px; }
@@ -136,8 +136,6 @@
     <div class="col hl wide" id="hl"></div>
     <div class="days" id="days"></div>
     <div class="col wide" id="budget"></div>
-    <div class="col" id="flights"></div>
-    <div class="col" id="status"></div>
   </div>
   <p class="note">Costs and travel times are AI estimates, not live prices. Double-check before booking.</p>
 
@@ -178,7 +176,7 @@
   const money = (n) => "$" + Math.round(n).toLocaleString();
   const signed = (n) => (n > 0 ? "+" : "−") + money(Math.abs(n));
   // A text box bound to a plan field (re-renders the parts that depend on it).
-  const box = (k, ph, rows = 2) => `<textarea rows="${rows}" placeholder="${esc(ph)}" oninput="plan['${k}'] = this.value; save(); renderStatus()">${esc(plan[k])}</textarea>`;
+  const box = (k, ph, rows = 2) => `<textarea rows="${rows}" placeholder="${esc(ph)}" oninput="plan['${k}'] = this.value; save()">${esc(plan[k])}</textarea>`;
 
   function load() {
     try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.days)) return { ...emptyPlan(), ...s, stages: s.stages || {} }; } catch (e) {}
@@ -246,7 +244,7 @@
 
   // ---------- rendering ----------
   function render() {
-    renderDays(); renderBudget(); renderFlights(); renderStatus();
+    renderDays(); renderBudget();
     save();
   }
 
@@ -325,48 +323,6 @@
         <div class="row"><span>Food: <span class="m">${b.days} days${plan.foodPerDay ? " × " + money(plan.foodPerDay) : ""}</span></span><span>${plan.foodPerDay ? money(b.food) : "?"}</span></div>
       </div>
       ${f.length ? diamond(`${b.total > (plan.saved ? plan.saved.total : 0) ? "MORE" : "LESS"} ACCOMMODATION / COST → ${money(b.total)}`) : ""}`;
-  }
-
-  function renderFlights() {
-    const f = flags().flights;
-    const el = $("flights");
-    el.classList.toggle("flagged", f.length > 0);
-    const fl = plan.flights;
-    const n = plan.days.length;
-    el.innerHTML = `
-      <div class="col-title">Flight Details</div>
-      <div class="scroll">
-        <div class="lbl">Flying from:</div>
-        <input type="text" value="${esc(plan.origin)}" placeholder="e.g. New York" oninput="plan.origin = this.value; save()" />
-        ${fl ? `
-          <div class="row"><span>${esc(fl.route)}</span></div>
-          <div class="row"><span>Estimate</span><span>~${money(fl.est_cost)}</span></div>
-          <div class="row"><span>Out</span><span>${n ? (plan.startDate ? esc(dateFor(0)) : "Day 1") : "TBD"}</span></div>
-          <div class="row"><span>Back</span><span>${n ? (plan.startDate ? esc(dateFor(n - 1)) : "Day " + n) : "TBD"}</span></div>
-          ${fl.watch_out ? `<div class="w-box">⚠ ${esc(fl.watch_out)}</div>` : ""}` : `<div class="hint">Estimates will come from the Flights research page.</div>`}
-        ${f.length ? `<div class="flag-list"><ul>${f.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
-      </div>
-      ${f.length ? diamond("CHANGE FLIGHT DAYS", true) : ""}`;
-  }
-
-  function renderStatus() {
-    const n = plan.days.length;
-    const f = flags();
-    const changed = f.budget.length + f.flights.length > 0;
-    const when = plan.startDate && n ? `${dateFor(0)} – ${dateFor(n - 1)}` : "";
-    const tbd = `<span class="tbd">TBD</span>`;
-    $("status").innerHTML = `
-      <div class="col-title">Trip Status</div>
-      <div class="scroll status-big">
-        <div>Length: ${n ? `<strong>${n} day${n > 1 ? "s" : ""}</strong>` : tbd}</div>
-        <div>Where: ${plan.where.trim() ? `<strong>${esc(plan.where)}</strong>` : tbd}</div>
-        <div>When: ${when ? `<strong>${esc(when)}</strong>` : tbd}</div>
-        ${plan.suggestedDays ? `<div class="hint">💡 About ${plan.suggestedDays} days covers what you want.</div>` : ""}
-        <div class="lbl" style="margin-top:8px">Start date:</div>
-        <input type="date" value="${esc(plan.startDate)}" onchange="plan.startDate = this.value; render()" />
-        ${n ? `<button class="btn ${changed ? "" : "btn-line"}" style="margin-top:10px" onclick="saveVersion()">${changed ? "✓ Got it, save this version" : plan.saved ? "✓ Version saved" : "Save this version"}</button>
-          <div class="hint">${plan.saved ? "Changes since your saved version show up as red flags." : "Save a version, then changes flag what they affect."}</div>` : ""}
-      </div>`;
   }
 
   // ---------- actions ----------
