@@ -247,6 +247,33 @@
         <li><strong>What the audit caught:</strong> my first live rate-limit test failed. Render puts two proxies (Cloudflare and Render's own) in front of the app, so the app was rate-limiting <em>Render's</em> internal address instead of the visitor's. A visitor could make about 24+ calls a minute, and two routes were never limited. I found the cause with a diagnostic on a preview deploy, fixed it, and added regression tests.</li>
       </ul>
 
+      <h3>Next Direction: Research Pages + Trip Overview (PRD v4 draft, Nov 24)</h3>
+      <p><strong>Why:</strong> today there are two separate ways in. The step-by-step flow is good for <em>researching</em> one decision, and the calendar (preview: <a href="https://nextstop-pr-13.onrender.com/calendar">PR #13</a>) is good for <em>seeing the whole trip</em>. They don't share anything. The next version joins them: research on topic pages, see everything on one overview.</p>
+      <ul>
+        <li><strong>Trip Overview (calendar) is home.</strong> Shows the trip day by day: what's decided, what's still open, and the running budget. Each open topic is a card ("Accommodations: 2 saved finds, not decided → Research").</li>
+        <li><strong>One Research page per topic.</strong> You say what you're deciding and the factors that matter to you (budget, vibe, must-haves). The layout fits the topic:
+          <ul>
+            <li><em>How many days:</em> a slider plus what you'd fit in at 7 vs. 10 days.</li>
+            <li><em>Accommodations:</em> hotel cards (price/night, area, link).</li>
+            <li><em>Where:</em> options side by side with trade-offs (today's flow).</li>
+            <li><em>Activities:</em> blocks you can drop onto the calendar.</li>
+          </ul>
+        </li>
+        <li><strong>Finds: research can store things for other topics.</strong> While researching "how many days," you find a hotel you love → <em>Save to… Accommodations</em>. It waits there when you open Accommodations, and shows on the calendar if it has dates. This is the feature that makes Nextstop different, so it gets built first.</li>
+        <li><strong>Data shape (one per topic):</strong> every topic has the same three parts, so pages can look different but save the same way:
+          <code>topics: { stay: { factors: [...], finds: [{title, note, link, cost, from: "length"}], decision: {...} }, ... }</code>,
+          plus <code>calendar: { days: [...] }</code>. Still one trip row, one private link.</li>
+      </ul>
+      <p><strong>Open questions (to settle in the workflow map):</strong></p>
+      <ol>
+        <li><strong>Who files a find?</strong> Proposal: the traveler taps "Save to…". The AI can only <em>suggest</em> a topic, never file on its own.</li>
+        <li><strong>Fixed or custom topics?</strong> Proposal: start fixed (Where, Length, Dates, Flights, Stay, Activities, Budget). Add custom topics ("Visa") later.</li>
+        <li><strong>Do decisions ripple?</strong> If Length changes from 10 to 7 days, does the calendar shrink and Activities re-check what fits? It's powerful but the hardest part. Proposal: show a warning first, auto-adjust later.</li>
+        <li><strong>Where does a new trip start?</strong> An empty overview with "start researching," or a quick setup like today's first page?</li>
+        <li><strong>Phone first?</strong> The classmate test was on a phone, and dragging onto a calendar is harder there.</li>
+      </ol>
+      <p><strong>Next step:</strong> sketch the workflow in FigJam/Excalidraw. (1) The overview with topic cards. (2) Two research pages that look different (Length and Accommodations). (3) The arrow for a hotel found in Length landing in Accommodations. Then update this section and build in small PRs.</p>
+
       <h3>Product Backlog</h3>
       <p>I keep the backlog as GitHub Issues, so each item is tied to the commits that ship it: <a href="https://github.com/building-with-ai-f26/cp4449-project1/issues">all backlog issues</a> · <a href="https://github.com/orgs/building-with-ai-f26/projects/2">Nextstop Roadmap board</a> (visible to class members). The rule: get the core one-decision-at-a-time loop solid before adding bigger features.</p>
       <ul>

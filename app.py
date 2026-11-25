@@ -266,6 +266,9 @@ def next_decision():
     if not open_keys:
         return jsonify({"suggestions": []})
     open_list = ", ".join(f"{k} ({CATEGORIES[k]})" for k in open_keys)
+    # The calendar's start page asks for short, high-level reasons ("brief"); the step-by-step page keeps one sentence.
+    reason_rule = ("a short phrase of 6-10 words (never more): the one high-level thing to know" if body.get("brief")
+                   else "one sentence specific to this trip")
     prompt = f"""The traveler's trip so far:
 {describe_trip(body["trip"])}
 
@@ -274,7 +277,7 @@ Still undecided: {open_list}
 Rank the undecided categories by what they should decide next, and why (e.g. what drives cost,
 what books up, what depends on what). Go big to small: the destination usually comes before dates, and dates
 before specific bookings, since the later layers depend on it. Return JSON:
-{{"suggestions": [{{"category": "the short key, e.g. \\"{open_keys[0]}\\"", "reason": "one sentence specific to this trip"}}]}}"""
+{{"suggestions": [{{"category": "the short key, e.g. \\"{open_keys[0]}\\"", "reason": "{reason_rule}"}}]}}"""
     response = run(prompt)
     # The AI sometimes answers with the label ("When (dates...)") instead of the key ("when"). Map it back.
     data = response.get_json() if hasattr(response, "get_json") else None
@@ -294,10 +297,137 @@ def to_category_key(value):
     return value
 
 
-def run(prompt):
+# ---------- Calendar view (#6, calendar-redesign branch) ----------
+
+PLAN_FIELDS = {
+    "origin": "Leaving from",
+    "where": "Where",
+    "what": "What they want to do",
+    "budget": "Budget idea",
+    "length": "Length idea",
+    "when": "When idea",
+    "stay": "Stay style",
+}
+ITEM_KINDS = {"flight", "transport", "activity", "rest"}
+
+
+def describe_plan(plan):
+    """Turn the calendar page's high-level panel into plain text for the prompt."""
+    lines = [f"- {label}: {(plan.get(key) or '').strip()}" for key, label in PLAN_FIELDS.items()
+             if (plan.get(key) or "").strip()]
+    return "\n".join(lines) or "- Nothing yet"
+
+
+def to_number(value):
+    """Read a price like '~$1,200' or '$35-45/night' as a number (the first one). Anything else is 0."""
+    if isinstance(value, (int, float)):
+        return value
+    digits = ""
+    for ch in str(value or ""):
+        if ch.isdigit() or (ch == "," and digits):
+            digits += ch
+        elif digits:
+            break
+    return int(digits.replace(",", "")) if digits else 0
+
+
+def normalize_sandbox(data):
+    """Clean the AI's sandbox reply so the page can trust its shape and add up its numbers."""
+    flights = data.get("flights")
+    out = {
+        "flights": {"route": flights.get("route", ""), "est_cost": to_number(flights.get("est_cost")),
+                    "watch_out": flights.get("watch_out", "")} if isinstance(flights, dict) else None,
+        "food_per_day": to_number(data.get("food_per_day")),
+        "suggested_days": to_number(data.get("suggested_days")) or None,
+        "legs": [],
+    }
+    for leg in data.get("legs") or []:
+        items = []
+        for item in leg.get("items") or []:
+            title = (item.get("title") or "").strip()
+            if not title:
+                continue
+            kind = (item.get("kind") or "").strip().lower()
+            items.append({
+                "title": title,
+                "kind": kind if kind in ITEM_KINDS else "activity",
+                "days": max(1, min(5, to_number(item.get("days")) or 1)),
+                "est_cost": to_number(item.get("est_cost")),
+                "why": item.get("why", ""),
+                "watch_out": item.get("watch_out", ""),
+            })
+        out["legs"].append({"name": (leg.get("name") or "Trip").strip(), "nightly": to_number(leg.get("nightly")),
+                            "stay_note": leg.get("stay_note", ""), "items": items})
+    return out
+
+
+# The 7 topics that get a research page (/research/<topic>). Same template as the calendar, different view.
+RESEARCH_TOPICS = {"where", "dates", "length", "activities", "stay", "flights", "budget"}
+
+
+def calendar_page(view, topic=""):
+    return render_template(
+        "calendar.html",
+        view=view,
+        topic=topic,
+        posthog_key=os.getenv("POSTHOG_KEY", ""),
+        posthog_host=os.getenv("POSTHOG_HOST", "https://us.i.posthog.com"),
+    )
+
+
+@app.route("/calendar")
+def calendar():
+    return calendar_page("overview")
+
+
+@app.route("/calendar/start")
+def calendar_start():
+    return calendar_page("start")
+
+
+@app.route("/research/<topic>")
+def research(topic):
+    if topic not in RESEARCH_TOPICS:
+        raise NotFound()
+    return calendar_page("research", topic)
+
+
+@app.post("/api/sandbox")
+@ai_limit
+def sandbox():
+    """Suggest things to do, grouped into legs, for the traveler to place on the calendar."""
+    body = request.get_json()
+    leg = (body.get("leg") or "").strip()
+    exclude = [str(t)[:80] for t in body.get("exclude") or [] if t][:60]  # keep the prompt (and bill) small
+    focus = (f'Only suggest NEW items for the "{leg}" leg (return just that one leg).' if leg
+             else "Split the trip into 2-4 legs (bases where they sleep), in a sensible travel order.")
+    avoid = f"Do not repeat these, they already have them: {'; '.join(exclude)}" if exclude else ""
+    prompt = f"""The traveler's high-level trip idea:
+{describe_plan(body.get("plan") or {})}
+
+They will build a day-by-day calendar themselves. Give them building blocks to place on it, not a finished itinerary.
+{focus}
+{avoid}
+For each leg give 3-6 items: the activities that fit what they want, plus the travel needed to get into that leg
+(e.g. "Fly to Guatemala City, go straight to Antigua"), and rest/explore time where it helps.
+"days" = how many calendar days the item takes (an overnight hike is 2). Keep titles under ~8 words.
+Costs are rough USD per person as plain numbers. "nightly" = typical price per night for their stay style in that leg.
+Return JSON:
+{{"flights": {{"route": "e.g. JFK -> GUA round trip", "est_cost": 500, "watch_out": "one specific risk"}},
+  "food_per_day": 20,
+  "suggested_days": 9,
+  "legs": [{{"name": "Antigua", "nightly": 40, "stay_note": "short note on where to stay",
+            "items": [{{"title": "Acatenango overnight hike", "kind": "flight|transport|activity|rest",
+                       "days": 2, "est_cost": 100, "why": "one short line tied to what they said",
+                       "watch_out": "one specific non-obvious risk, or empty"}}]}}]}}"""
+    return run(prompt, transform=normalize_sandbox)
+
+
+def run(prompt, transform=None):
     """Call the AI and turn any failure into a readable error for the page."""
     try:
-        return jsonify(ask_ai(prompt))
+        result = ask_ai(prompt)
+        return jsonify(transform(result) if transform else result)
     except json.JSONDecodeError:
         return jsonify({"error": "The AI returned something that wasn't valid JSON. Try again."}), 502
     except requests.HTTPError as e:

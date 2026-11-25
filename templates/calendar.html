@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nextstop · Trip calendar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f6f5f3; --card: #fff; --text: #1c2526; --muted: #78716c; --faint: #a8a29e;
+      --line: #e7e5e4; --line-strong: #d6d3d1; --field: #fafaf9;
+      --accent: #0f766e; --accent-dark: #115e59; --accent-soft: #e6f4f1;
+      --warn-text: #9a3f12; --warn-bg: #fff4e6; --flag: #e5533d;
+      --radius: 14px; --shadow: 0 1px 2px rgba(28,25,23,.04), 0 2px 8px rgba(28,25,23,.04);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+           color: var(--text); line-height: 1.45; -webkit-font-smoothing: antialiased;
+           background: var(--bg) radial-gradient(#dedad5 1px, transparent 1px) 0 0 / 20px 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px 10px; gap: 12px; flex-wrap: wrap; }
+    .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+    .logo span { color: var(--accent); }
+    .logo .logo-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 15px; }
+    .header-links { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+    .link-btn { background: none; border: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; padding: 2px; }
+    .link-btn:hover { color: var(--accent); }
+    #error { padding: 0 28px; }
+    .error { background: #fdecec; color: #991b1b; border: 1px solid #f5c2c2; border-radius: 10px; padding: 8px 12px; font-weight: 600; font-size: 14px; }
+
+    /* Page: High level on the left (full height, no inner scroll) | days + budget scroll sideways */
+    .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; padding: 8px 28px 40px; align-items: start; }
+    @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); padding: 8px 16px 40px; } header { padding: 16px 16px 8px; } }
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .col-title { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .board { display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 16px; }
+
+    /* High level */
+    #hl { padding: 18px 18px 6px; position: sticky; top: 12px; }
+    .topic { padding: 10px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+    .topic:first-of-type { border-top: none; padding-top: 0; }
+    .topic-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .lbl { font-weight: 800; font-size: 13.5px; }
+    #hl textarea { overflow: hidden; }
+    textarea, input[type=text] { width: 100%; font: inherit; font-size: 13px; border: 1px solid transparent; border-radius: 8px;
+      padding: 6px 9px; background: var(--field); color: var(--text); resize: none; }
+    textarea:hover, input[type=text]:hover { border-color: var(--line); }
+    textarea:focus, input:focus { outline: none; background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    textarea::placeholder, input::placeholder { color: var(--faint); }
+    /* Stage: one segmented control */
+    .stages { display: flex; flex: 0 0 auto; background: #f1f0ee; border-radius: 7px; padding: 2px; gap: 1px; }
+    .stages button { font: inherit; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; cursor: pointer;
+                     border: none; background: transparent; color: var(--muted); }
+    .stages button:hover { color: var(--text); }
+    .stages button.on { box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .stages button.on.s1 { background: #fff; color: #57534e; }
+    .stages button.on.s2 { background: #fde9cc; color: #9a3f12; }
+    .stages button.on.s3 { background: #cdebe5; color: var(--accent-dark); }
+
+    /* Days */
+    .days { display: flex; gap: 10px; align-items: flex-start; }
+    .daycol { width: 150px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
+    .dhead { padding: 10px 12px; }
+    .dhead .d { font-weight: 800; font-size: 14px; }
+    .dhead .date { color: var(--muted); font-size: 12px; }
+    .leg { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 99px; }
+    .cards { display: flex; flex-direction: column; gap: 8px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 9px 22px 9px 11px; font-size: 12.5px; position: relative; box-shadow: var(--shadow); }
+    .card .part { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .card .w { color: var(--warn-text); font-size: 11px; margin-top: 4px; font-weight: 700; }
+    .card .x { position: absolute; top: 5px; right: 5px; border: none; background: none; color: var(--faint); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; opacity: 0; }
+    .card:hover .x { opacity: 1; }
+    .card .x:hover { color: var(--flag); }
+    .card.custom { border-style: dashed; box-shadow: none; }
+    .card.flight { background: #f3f8ff; border-color: #dbe7f7; }
+    .add-own { font-size: 12px; background: transparent; border: 1px dashed var(--line-strong); }
+    .daytools { display: flex; justify-content: space-between; opacity: 0; transition: opacity .15s; }
+    .daycol:hover .daytools { opacity: 1; }
+    .daytools .link-btn { font-size: 11px; font-weight: 600; }
+    .add-day { width: 64px; flex: 0 0 auto; align-self: stretch; min-height: 80px; border: 1px dashed var(--line-strong); border-radius: var(--radius);
+               display: grid; place-items: center; cursor: pointer; font-weight: 800; color: var(--muted); font-size: 12.5px; text-align: center; }
+    .add-day:hover { background: var(--accent-soft); color: var(--accent-dark); border-color: var(--accent); }
+    .empty-days { width: 240px; color: var(--muted); font-size: 13px; text-align: center; padding: 24px; border: 1px dashed var(--line-strong); border-radius: var(--radius); }
+
+    /* Budget */
+    #budget { flex: 0 0 auto; width: 260px; padding: 18px; position: relative; font-size: 13px; }
+    .big-total { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+    .of { color: var(--muted); font-size: 12.5px; margin: 2px 0 10px; }
+    .bar { height: 6px; background: #f1f0ee; border-radius: 99px; overflow: hidden; margin-bottom: 14px; }
+    .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+    .bar.over i { background: var(--flag); }
+    .group { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 12px 0 4px; }
+    .row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+    .row .m { color: var(--muted); font-size: 11.5px; }
+    .tbd { color: var(--faint); }
+    .hint { color: var(--muted); font-size: 12px; }
+
+    /* Ripple flags (from "Save this version") */
+    .flagged { border-color: var(--flag) !important; box-shadow: 0 0 0 1px var(--flag) !important; }
+    .diamond { position: absolute; left: 50%; bottom: -58px; width: 132px; height: 132px; margin-left: -66px; z-index: 2;
+               background: var(--flag); transform: rotate(45deg); display: grid; place-items: center; box-shadow: 0 6px 18px rgba(229,83,61,.35); }
+    .diamond span { transform: rotate(-45deg); color: #fff; font-size: 11px; font-weight: 800; text-align: center; width: 120px; line-height: 1.25; }
+    .flag-list { color: #b42d18; font-weight: 700; font-size: 12px; border-bottom: 1px dashed var(--flag); padding-bottom: 6px; }
+    .flag-list ul { margin: 2px 0 0; padding-left: 14px; }
+    .note { font-size: 12px; color: var(--faint); text-align: center; margin: 0 0 30px; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: #fff; border: none; border-radius: 9px; padding: 9px 14px;
+           font: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; text-decoration: none; }
+    .btn:hover:not(:disabled) { background: var(--accent-dark); }
+    .btn:disabled { opacity: .55; cursor: wait; }
+    .btn-line { background: #fff; color: var(--accent-dark); border: 1px solid var(--line-strong); }
+    .btn-line:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
+    .btn-sm { padding: 4px 11px; font-size: 12px; border-radius: 7px; }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.5); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+    .btn-line .spinner { border-color: var(--line); border-top-color: var(--accent); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Side panel: read-only summary + Open */
+    .st { font-size: 11.5px; font-weight: 800; padding: 1px 8px; border-radius: 99px; background: #f1f0ee; color: var(--faint); }
+    .st.s1 { background: #f1f0ee; color: #57534e; } .st.s2 { background: #fde9cc; color: #9a3f12; } .st.s3 { background: #cdebe5; color: var(--accent-dark); }
+    .pick-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .pick { font-size: 13px; }
+    .pick .rough { color: var(--muted); font-style: italic; }
+
+    /* Toolbar over the calendar */
+    .hero { width: 420px; max-width: 100%; text-align: center; padding: 36px 28px; }
+    .hero h2 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.02em; }
+    .hero p { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
+
+    /* Start + research pages */
+    .page { max-width: 1000px; margin: 0 auto; padding: 4px 28px 60px; }
+    @media (max-width: 760px) { .page { padding: 4px 16px 60px; } }
+    .back { color: var(--muted); font-weight: 700; font-size: 13px; text-decoration: none; }
+    .back:hover { color: var(--accent); }
+    .page h1 { font-size: 28px; letter-spacing: -0.02em; margin: 8px 0 4px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .lead { color: var(--muted); margin: 0 0 18px; font-size: 14.5px; }
+    .pad { padding: 20px; margin-bottom: 16px; }
+    .pad h3 { margin: 0 0 4px; font-size: 15px; }
+    .pad > .hint { margin-bottom: 10px; }
+    .knowns { display: grid; grid-template-columns: 170px 1fr; gap: 10px 14px; align-items: center; }
+    @media (max-width: 600px) { .knowns { grid-template-columns: 1fr; } }
+    .knowns label { font-weight: 800; font-size: 13.5px; }
+    .knowns input::placeholder { color: #d6d2cd; font-weight: 400; }
+    .suggest { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--line); }
+    .suggest:first-of-type { border-top: none; }
+    .suggest .n { font-weight: 800; font-size: 13px; color: var(--faint); width: 22px; }
+    .suggest .r { flex: 1; font-size: 13.5px; }
+    .suggest .r b { display: block; font-size: 14.5px; }
+    /* Factors */
+    .factor { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    .factor:first-child { border-top: none; }
+    .factor .fname { flex: 1; min-width: 140px; font-weight: 700; font-size: 13.5px; }
+    .imp { display: flex; background: #f1f0ee; border-radius: 7px; padding: 2px; gap: 1px; }
+    .imp button { font: inherit; font-size: 11.5px; font-weight: 700; border: none; background: transparent; color: var(--muted); padding: 2px 9px; border-radius: 5px; cursor: pointer; }
+    .imp button.on { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .hard { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; user-select: none; }
+    .hard input { accent-color: var(--flag); }
+    .hard.on { color: #b42d18; }
+    .fx { border: none; background: none; color: var(--faint); cursor: pointer; font-size: 15px; }
+    .fx:hover { color: var(--flag); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+    .chip { font: inherit; font-size: 12px; font-weight: 700; border: 1px dashed var(--line-strong); background: #fff; color: var(--muted); border-radius: 99px; padding: 3px 10px; cursor: pointer; }
+    .chip:hover { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-soft); }
+    /* AI options */
+    .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; margin-top: 12px; }
+    .opt { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px; background: #fff; }
+    .opt.chosen { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    .opt h4 { margin: 0; font-size: 15px; }
+    .opt .cost { font-weight: 800; color: var(--accent-dark); font-size: 13px; }
+    .opt ul { margin: 0; padding-left: 17px; font-size: 12.5px; }
+    .opt .wo { color: var(--warn-text); }
+    .opt details { font-size: 12.5px; color: var(--muted); }
+    .opt summary { cursor: pointer; font-weight: 700; }
+    .opt .btn { align-self: flex-start; margin-top: auto; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  </style>
+  {% if posthog_key %}
+  <script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  posthog.init({{ posthog_key | tojson }}, { api_host: {{ posthog_host | tojson }}, person_profiles: 'identified_only' });
+  </script>
+  {% endif %}
+</head>
+<body>
+  <header>
+    <div class="logo"><span class="logo-mark" aria-hidden="true">✈︎</span><div>next<span>stop</span></div></div>
+    <div class="header-links">
+      <a class="link-btn" href="/">Step-by-step view</a>
+      <button class="link-btn" onclick="loadSample()">Load Guatemala sample</button>
+      <button class="link-btn" onclick="startOver()">Start over</button>
+    </div>
+  </header>
+  <div id="error"></div>
+
+  <div id="view-overview" hidden>
+    <div class="layout">
+      <aside class="panel" id="hl"></aside>
+      <div>
+        <div class="board">
+          <div class="days" id="days"></div>
+          <section class="panel" id="budget"></section>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="view-start" class="page" hidden></div>
+  <div id="view-research" class="page" hidden></div>
+  <p class="note">Costs and travel times are AI estimates, not live prices. Double-check before booking.</p>
+
+<script>
+  // The whole plan lives in this browser (and localStorage). The server only calls the AI.
+  const STORE = "nextstop-calendar-v1";
+  const VIEW = {{ view | tojson }};      // "overview" (calendar), "start", or "research"
+  const TOPIC = {{ topic | tojson }};    // which research page, e.g. "where"
+  // Every decision, in the High level column: [key, label, plan field, placeholder]
+  const TOPICS = [
+    ["where", "Where", "where", "e.g. Guatemala"],
+    ["dates", "Dates", "when", "e.g. April"],
+    ["length", "How many days", "length", "e.g. 7–10 days"],
+    ["activities", "Activities", "what", "e.g. Acatenango hike, the lake"],
+    ["stay", "Accommodations", "stay", "e.g. quiet guesthouses"],
+    ["flights", "Flights", "flightsNote", "e.g. cheapest round trip"],
+    ["budget", "Budget", "budget", "e.g. cheap, ~$1,200 total"],
+  ];
+  const topicInfo = (key) => TOPICS.find(t => t[0] === key);
+  // The server's AI routes use slightly different names for two topics.
+  const AI_KEY = { where: "where", dates: "when", length: "length", activities: "activities", stay: "stay", flights: "transport", budget: "budget" };
+  const FROM_AI_KEY = Object.fromEntries(Object.entries(AI_KEY).map(([k, v]) => [v, k]));
+  // Prompts for "My factors", so it's not just a blank box.
+  const FACTOR_IDEAS = {
+    where: ["Cheap to get to", "Warm weather", "Short flight", "Good hiking", "Not too touristy", "Safe for solo travel", "Good food"],
+    dates: ["Avoid holidays", "Good weather", "Cheaper flights", "Days off work", "Fewer crowds", "Local festivals"],
+    length: ["Days off work", "Enough time for activities", "Cost per day", "Not too rushed", "Jet lag recovery"],
+    activities: ["Hiking", "Beaches / water", "Food", "Culture & history", "Nightlife", "Rest days", "Adventure"],
+    stay: ["Price per night", "Walkable area", "Quiet", "Kitchen", "AC", "Pool", "Meet other travelers"],
+    flights: ["Cheapest", "Fastest", "Nonstop", "No red-eyes", "Carry-on only", "Good times of day"],
+    budget: ["Hard max", "Splurge on activities", "Save on stays", "Include food", "Leave a buffer"],
+  };
+  const STAGE_NAME = { 1: "Rough idea", 2: "Workshopping", 3: "Locked in" };
+  const STAGE_SHORT = { 1: "Rough", 2: "Workshop", 3: "Locked" };
+  const KIND_ICON = { flight: "✈️", transport: "🚐", activity: "🥾", rest: "😌", custom: "" };
+
+  const emptyPlan = () => ({
+    origin: "", where: "", what: "", budget: "", length: "", when: "", stay: "",
+    flightsNote: "", startDate: "", thoughts: "",
+    stages: {},        // topic key -> 1 rough idea, 2 workshopping, 3 locked in (missing = not started)
+    research: {},      // topic key -> { rough, factors: [{ name, imp: 1|2|3, hard }], options: [AI options], chosen }
+    days: [],          // [{ items: [{ uid, id, part, of, title, kind, leg, est_cost, watch_out, src }] }]
+    sandbox: [],       // not-yet-placed building blocks: { id, title, kind, leg, days, est_cost, why, watch_out }
+    legs: {},          // { "Antigua": { nightly, stay_note, order } }
+    flights: null, foodPerDay: 0, suggestedDays: null,
+    saved: null,       // snapshot from "Save this version", used for ripple flags
+  });
+  // Dummy Guatemala trip, so there's something to look at. Shown when nothing is saved yet.
+  function samplePlan() {
+    let n = 0;
+    const it = (title, kind, leg, est_cost, extra = {}) => ({ uid: "s" + n++, id: "s" + n, part: 1, of: 1, title, kind, leg, est_cost, ...extra });
+    const hike = { id: "hike", of: 2, kind: "activity", leg: "Antigua", title: "Acatenango overnight hike",
+                   watch_out: "Gets below freezing at the top: rent a jacket" };
+    return {
+      ...emptyPlan(),
+      where: "Guatemala: Antigua → Lake Atitlán → Tikal", when: "April 10–18", length: "9 days",
+      what: "Acatenango hike, the lake, Tikal ruins", stay: "Cheap guesthouses, one lakeside", flightsNote: "From JFK, cheapest round trip",
+      budget: "~$1,200 total",
+      stages: { where: 2, dates: 2, length: 3, activities: 2, stay: 2, flights: 1, budget: 2 },
+      research: {
+        where: { rough: "Somewhere warm and cheap in Central America", factors: [{ name: "Cheap to get to", imp: 3, hard: false }, { name: "Good hiking", imp: 3, hard: false }, { name: "Safe for solo travel", imp: 3, hard: true }] },
+        dates: { rough: "Sometime in spring", factors: [{ name: "Avoid holidays", imp: 2, hard: false }, { name: "Days off work", imp: 3, hard: true }] },
+        length: { rough: "7–10 days", factors: [{ name: "Days off work", imp: 3, hard: true }, { name: "Enough time for activities", imp: 3, hard: false }] },
+        activities: { rough: "Hiking + some lake time", factors: [{ name: "Hiking", imp: 3, hard: false }, { name: "Rest days", imp: 1, hard: false }] },
+        stay: { rough: "Cheap but nice", factors: [{ name: "Price per night", imp: 3, hard: false }, { name: "Quiet", imp: 2, hard: false }] },
+        flights: { rough: "Cheapest round trip from NYC", factors: [{ name: "Cheapest", imp: 3, hard: false }, { name: "No red-eyes", imp: 1, hard: false }] },
+        budget: { rough: "Cheap", factors: [{ name: "Hard max", imp: 3, hard: true }] },
+      },
+      origin: "New York", startDate: "2027-04-10",
+      legs: { "Antigua": { nightly: 35, order: 0 }, "Lake Atitlán": { nightly: 50, order: 1 }, "Tikal": { nightly: 35, order: 2 } },
+      flights: { route: "JFK ⇄ Guatemala City", est_cost: 480 },
+      foodPerDay: 15,
+      days: [
+        { items: [it("Fly JFK → Guatemala City", "flight", "Antigua", 0), it("Shuttle to Antigua", "transport", "Antigua", 30)] },
+        { items: [it("Walk the old town + cafés", "activity", "Antigua", 20)] },
+        { items: [{ ...hike, uid: "h1", part: 1, est_cost: 90 }] },
+        { items: [{ ...hike, uid: "h2", part: 2, est_cost: 0 }, it("Shuttle to Lake Atitlán", "transport", "Lake Atitlán", 25)] },
+        { items: [it("Kayak + swim", "activity", "Lake Atitlán", 25)] },
+        { items: [it("Indian Nose sunrise", "activity", "Lake Atitlán", 15)] },
+        { items: [it("Travel to Flores", "transport", "Tikal", 60)] },
+        { items: [it("Tikal ruins at sunrise", "activity", "Tikal", 50)] },
+        { items: [it("Fly home", "flight", "Tikal", 0)] },
+      ],
+    };
+  }
+
+  let plan = load();
+  let nextId = Date.now();
+  const uid = () => String(nextId++);
+
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const money = (n) => "$" + Math.round(n).toLocaleString();
+  const signed = (n) => (n > 0 ? "+" : "−") + money(Math.abs(n));
+  // A text box bound to a plan field (re-renders the parts that depend on it).
+  const box = (k, ph, rows = 2) => `<textarea rows="${rows}" placeholder="${esc(ph)}" oninput="plan['${k}'] = this.value; grow(this); save(); renderBudget()">${esc(plan[k])}</textarea>`;
+
+  function load() {
+    try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.days)) return { ...emptyPlan(), ...s, stages: s.stages || {}, research: s.research || {} }; } catch (e) {}
+    return emptyPlan();   // new visitors start with an empty calendar
+  }
+  function save() { try { localStorage.setItem(STORE, JSON.stringify(plan)); } catch (e) {} }
+  function showError(msg) { $("error").innerHTML = msg ? `<div class="error">${esc(msg)}</div>` : ""; }
+
+  function dateFor(i) {
+    if (!plan.startDate) return "";
+    const d = new Date(plan.startDate + "T12:00:00");
+    d.setDate(d.getDate() + i);
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  }
+
+  // Each stop gets its own soft color, in the order it first appears.
+  const LEG_COLORS = [["#fef3c7", "#92400e"], ["#cffafe", "#155e75"], ["#dcfce7", "#166534"], ["#fce7f3", "#9d174d"], ["#e0e7ff", "#3730a3"]];
+  function legStyle(leg) {
+    const order = [...new Set(plan.days.map((_, i) => dayLeg(i)).filter(Boolean))];
+    const [bg, fg] = LEG_COLORS[Math.max(0, order.indexOf(leg)) % LEG_COLORS.length];
+    return `background:${bg};color:${fg}`;
+  }
+
+  // Where you sleep on day i = the leg of the last item that day; otherwise carry over from the day before.
+  function dayLeg(i) {
+    for (let j = i; j >= 0; j--) {
+      const withLeg = plan.days[j].items.filter(it => it.leg && it.kind !== "flight");  // a flight doesn't tell you where you sleep
+      if (withLeg.length) return withLeg[withLeg.length - 1].leg;
+    }
+    return null;
+  }
+
+  // ---------- numbers: budget + snapshot for ripple flags ----------
+  function numbers() {
+    const n = plan.days.length;
+    const nightsByLeg = {};
+    for (let i = 0; i < n - 1; i++) {        // you don't sleep there the night you fly home
+      const leg = dayLeg(i) || "Not set yet";
+      nightsByLeg[leg] = (nightsByLeg[leg] || 0) + 1;
+    }
+    const stays = Object.entries(nightsByLeg).map(([leg, nights]) => {
+      const nightly = (plan.legs[leg] || {}).nightly || 0;
+      return { leg, nights, nightly, cost: nights * nightly };
+    });
+    const firstParts = plan.days.flatMap(d => d.items).filter(it => it.part === 1);
+    const extras = firstParts.filter(it => it.kind !== "flight" && it.est_cost);
+    const activities = extras.reduce((s, it) => s + it.est_cost, 0);
+    const flights = plan.flights ? plan.flights.est_cost : 0;
+    const food = plan.foodPerDay * n;
+    const total = flights + stays.reduce((s, x) => s + x.cost, 0) + activities + food;
+    return { days: n, nightsByLeg, stays, extras, activities, flights, food, total, startDate: plan.startDate };
+  }
+
+  function flags() {
+    const out = { budget: [], flights: [] };
+    if (!plan.saved) return out;
+    const now = numbers(), was = plan.saved;
+    if (now.days !== was.days) out.flights.push(`Trip is now ${now.days} days (was ${was.days})`);
+    if (now.startDate !== was.startDate) out.flights.push("Start date changed");
+    const legs = new Set([...Object.keys(now.nightsByLeg), ...Object.keys(was.nightsByLeg)]);
+    for (const leg of legs) {
+      const d = (now.nightsByLeg[leg] || 0) - (was.nightsByLeg[leg] || 0);
+      if (!d) continue;
+      const nightly = (plan.legs[leg] || {}).nightly || 0;
+      out.budget.push(`${d > 0 ? "more" : "fewer"} nights in ${leg} so ${d > 0 ? "more" : "less"} accommodation` + (nightly ? ` (${signed(d * nightly)})` : ""));
+    }
+    if (Math.round(now.activities) !== Math.round(was.activities)) out.budget.push(`activities ${signed(now.activities - was.activities)}`);
+    if (out.budget.length && Math.round(now.total) !== Math.round(was.total)) out.budget.push(`total ${money(now.total)} (was ${money(was.total)})`);
+    return out;
+  }
+
+  function saveVersion() { plan.saved = numbers(); render(); }
+
+  // ---------- rendering ----------
+  function render() {
+    renderDays(); renderBudget();
+    save();
+  }
+
+  // Research notes for one topic (created on first use).
+  function R(key) {
+    plan.research[key] = plan.research[key] || { rough: "", factors: [], options: null, chosen: null };
+    return plan.research[key];
+  }
+  // What a topic currently says: its pick if there is one, otherwise the rough idea.
+  const pickOf = (key) => (plan[topicInfo(key)[2]] || "").trim();
+  const stageBadge = (st) => `<span class="st ${st ? "s" + st : ""}">${st ? STAGE_SHORT[st] : "Not started"}</span>`;
+
+  // Left side panel: each topic's status as text + an Open button to its research page.
+  function renderStatic() {
+    $("hl").innerHTML = `
+      <div class="col-title">High level</div>
+      ${TOPICS.map(([key, label]) => {
+        const pick = pickOf(key), rough = (R(key).rough || "").trim();
+        return `
+        <div class="topic">
+          <div class="topic-head"><span class="lbl">${label}</span>${stageBadge(plan.stages[key])}</div>
+          <div class="pick-row">
+            <div class="pick">${pick ? esc(pick) : rough ? `<span class="rough">${esc(rough)}</span>` : `<span class="tbd">Nothing yet</span>`}</div>
+            <a class="btn btn-sm" href="/research/${key}">Open</a>
+          </div>
+        </div>`;
+      }).join("")}`;
+  }
+
+  // Text boxes grow to fit what you type (no inner scrollbars).
+  function grow(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; }
+  const isEmpty = () => !plan.days.length && !Object.keys(plan.stages).length;
+
+  function renderDays() {
+    const cols = plan.days.map((d, i) => {
+      const leg = dayLeg(i);
+      const cards = d.items.map(it => `
+        <div class="card ${esc(it.kind)}">
+          <div>${KIND_ICON[it.kind] ? KIND_ICON[it.kind] + " " : ""}${esc(it.title)}</div>
+          ${it.of > 1 ? `<div class="part">day ${it.part} of ${it.of}</div>` : ""}
+          ${it.watch_out && it.part === 1 ? `<div class="w" title="${esc(it.watch_out)}">⚠ watch out</div>` : ""}
+          <button class="x" title="Remove" onclick="unplace('${it.id}')">×</button>
+        </div>`).join("");
+      return `
+        <div class="daycol">
+          <div class="panel dhead">
+            <div class="d">Day ${i + 1}</div>
+            ${plan.startDate ? `<div class="date">${esc(dateFor(i))}</div>` : ""}
+            ${leg ? `<span class="leg" style="${legStyle(leg)}">${esc(leg)}</span>` : ""}
+          </div>
+          <div class="cards">${cards}</div>
+          <input type="text" class="add-own" placeholder="+ add something" onkeydown="if(event.key==='Enter'){addOwn(${i}, this.value)}" />
+          <div class="daytools">
+            <button class="link-btn" onclick="insertDay(${i})">+ day after</button>
+            <button class="link-btn" onclick="removeDay(${i})">remove</button>
+          </div>
+        </div>`;
+    }).join("");
+    if (isEmpty()) {
+      $("days").innerHTML = `<div class="panel hero"><h2>Your calendar is empty</h2>
+        <p>Start with what you already know.</p>
+        <a class="btn" href="/calendar/start">Start planning your trip →</a></div>`;
+      return;
+    }
+    $("days").innerHTML = (cols || `<div class="empty-days">No days yet. Pick <b>How many days</b>, or click <strong>+ day</strong>.</div>`) +
+      `<div class="add-day" onclick="insertDay(${plan.days.length - 1})">+<br>day</div>`;
+  }
+
+  function diamond(text, small) { return `<div class="diamond ${small ? "small" : ""}"><span>${esc(text)}</span></div>`; }
+
+  function renderBudget() {
+    const b = numbers();
+    const f = flags().budget;
+    const el = $("budget");
+    el.classList.toggle("flagged", f.length > 0);
+    const line = (label, amount, meta = "") => `<div class="row"><span>${label}${meta ? ` <span class="m">${meta}</span>` : ""}</span><span class="${amount == null ? "tbd" : ""}">${amount == null ? "?" : money(amount)}</span></div>`;
+    const acts = b.extras.filter(it => it.kind !== "transport");
+    const trans = b.extras.filter(it => it.kind === "transport");
+    // Your budget number, pulled from the Budget text in High level ("~$1,200 total" -> 1200)
+    const m = String(plan.budget || R("budget").rough).replace(/,/g, "").match(/\d+/);
+    const target = m ? Number(m[0]) : 0;
+    const over = target && b.total > target;
+    el.innerHTML = `
+      <div class="col-title">Budget</div>
+      ${f.length ? `<div class="flag-list">Since your saved version:<ul>${f.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      <div class="big-total">${b.days ? "~" + money(b.total) : "<span class='tbd'>TBD</span>"}</div>
+      <div class="of">${target ? (over ? `${money(b.total - target)} over your ${money(target)}` : `${money(target - b.total)} left of ${money(target)}`) : ""}</div>
+      ${target ? `<div class="bar ${over ? "over" : ""}"><i style="width:${Math.min(100, b.total / target * 100)}%"></i></div>` : ""}
+      <div class="group">Flights</div>
+      ${line(plan.flights ? esc(plan.flights.route) : "Flights", plan.flights ? b.flights : null)}
+      <div class="group">Stays</div>
+      ${b.stays.map(s => line(esc(s.leg), s.nightly ? s.cost : null, `${s.nights}n${s.nightly ? " × " + money(s.nightly) : ""}`)).join("") || `<div class="row tbd">None yet</div>`}
+      <div class="group">Activities</div>
+      ${acts.map(it => line(esc(it.title), it.est_cost)).join("") || `<div class="row tbd">None yet</div>`}
+      <div class="group">Getting around</div>
+      ${trans.map(it => line(esc(it.title), it.est_cost)).join("") || `<div class="row tbd">None yet</div>`}
+      <div class="group">Food</div>
+      ${line("Food", plan.foodPerDay ? b.food : null, `${b.days} days${plan.foodPerDay ? " × " + money(plan.foodPerDay) : ""}`)}
+      ${f.length ? diamond(`${b.total > (plan.saved ? plan.saved.total : 0) ? "MORE" : "LESS"} ACCOMMODATION / COST → ${money(b.total)}`) : ""}`;
+  }
+
+  // ---------- actions ----------
+  function ensureDays(count) { while (plan.days.length < count) plan.days.push({ items: [] }); }
+
+  // Remove every day-part of an item; sandbox items go back to the sandbox, your own items are deleted.
+  function unplace(id) {
+    let src = null;
+    for (const d of plan.days) {
+      d.items = d.items.filter(it => { if (it.id === id) { src = src || it.src || null; return false; } return true; });
+    }
+    if (src) plan.sandbox.push(src);
+    render();
+  }
+
+  function addOwn(i, text) {
+    text = text.trim();
+    if (!text) return;
+    plan.days[i].items.push({ uid: uid(), id: uid(), part: 1, of: 1, title: text, kind: "custom", leg: dayLeg(i), est_cost: 0 });
+    render();
+  }
+
+  function insertDay(i) { plan.days.splice(i + 1, 0, { items: [] }); render(); }
+
+  function removeDay(i) {
+    // Items on this day go back to the sandbox (your own typed items are dropped).
+    // Multi-day items come off the calendar entirely, including their parts on other days.
+    const removed = plan.days[i].items;
+    const srcById = Object.fromEntries(removed.filter(it => it.src).map(it => [it.id, it.src]));
+    plan.days.splice(i, 1);
+    for (const id of new Set(removed.map(it => it.id))) {
+      for (const d of plan.days) d.items = d.items.filter(it => it.id !== id);
+      if (srcById[id]) plan.sandbox.push(srcById[id]);
+    }
+    render();
+  }
+
+  // ---------- AI helpers (reuse the existing, rate-limited /api routes) ----------
+  // The trip as the AI routes expect it: picks at stage 2+ count as decided, the rest are starting ideas,
+  // and each topic's factors become its preferences (hard rules marked so the AI never breaks them).
+  function tripForAI() {
+    const trip = { origin: plan.origin, notes: "", decided: {}, ideas: {}, prefs: {} };
+    for (const [key] of TOPICS) {
+      const k = AI_KEY[key], r = R(key), pick = pickOf(key);
+      if (pick && (plan.stages[key] || 0) >= 2) trip.decided[k] = pick;
+      else if (pick || r.rough) trip.ideas[k] = pick || r.rough;
+      const f = (r.factors || []).map(x => `${x.name} (${x.hard ? "HARD RULE, never break" : ["", "low", "medium", "high"][x.imp] + " importance"})`);
+      if (f.length) trip.prefs[k] = f.join("; ");
+    }
+    return trip;
+  }
+  async function post(url, body) {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || "Something went wrong. Try again.");
+    return data;
+  }
+  function busy(btn, label) { btn.disabled = true; btn.dataset.label = btn.innerHTML; btn.innerHTML = `<span class="spinner"></span>${label}`; }
+  function done(btn) { btn.disabled = false; btn.innerHTML = btn.dataset.label; }
+
+  // At most n words, with "…" if it was cut.
+  function short(text, n) { const w = String(text || "").trim().split(/\s+/); return w.length > n ? w.slice(0, n).join(" ").replace(/[,;:.]$/, "") + "…" : w.join(" "); }
+
+  // ---------- Start: what you know already -> what to decide first ----------
+  function renderStart() {
+    $("view-start").innerHTML = `
+      <a class="back" href="/calendar">← Back to calendar</a>
+      <h1>Start planning your trip</h1>
+      <p class="lead">Rough is fine. Skip what you don't know.</p>
+      <section class="panel pad">
+        <div class="knowns">
+          <label for="k-origin">Leaving from</label><input type="text" id="k-origin" value="${esc(plan.origin)}" placeholder="e.g. New York" />
+          ${TOPICS.map(([key, label, , ph]) => `<label for="k-${key}">${label}</label>
+            <input type="text" id="k-${key}" value="${esc(R(key).rough || pickOf(key))}" placeholder="${esc(ph)}" />`).join("")}
+        </div>
+        <div class="actions">
+          <button class="btn" id="first-btn" onclick="saveKnowns(true)">✨ Suggest what to decide first</button>
+          <button class="btn btn-line" onclick="saveKnowns(false)">I'll choose</button>
+        </div>
+      </section>
+      <section id="first"></section>`;
+  }
+
+  // Save what they know, then either let AI rank the topics or let them pick one themselves.
+  async function saveKnowns(useAI) {
+    plan.origin = $("k-origin").value.trim();
+    for (const [key] of TOPICS) {
+      const v = $("k-" + key).value.trim();
+      R(key).rough = v;
+      if (v && !plan.stages[key]) plan.stages[key] = 1;
+    }
+    save();
+    if (!useAI) {
+      $("first").innerHTML = `<section class="panel pad"><h3>What do you want to decide first?</h3>
+        ${TOPICS.map(([key, label]) => `<div class="suggest"><div class="r"><b>${label}</b></div>
+          <a class="btn btn-line btn-sm" href="/research/${key}">Research this →</a></div>`).join("")}</section>`;
+      $("first").scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    const btn = $("first-btn"); busy(btn, "Thinking…");
+    try {
+      const data = await post("/api/next", { trip: tripForAI(), brief: true });
+      const list = (data.suggestions || []).map(s => ({ ...s, key: FROM_AI_KEY[s.category] })).filter(s => s.key);
+      $("first").innerHTML = `<section class="panel pad"><h3>What to decide first</h3>
+        ${list.map((s, i) => `<div class="suggest"><span class="n">${i + 1}</span>
+          <div class="r"><b>${topicInfo(s.key)[1]}</b>${esc(short(s.reason, 10))}</div>
+          <a class="btn ${i ? "btn-line" : ""} btn-sm" href="/research/${s.key}">Research this →</a></div>`).join("")}
+        <div class="actions"><a class="btn btn-line" href="/calendar">Go to my calendar</a></div></section>`;
+      $("first").scrollIntoView({ behavior: "smooth" });
+    } catch (e) { showError(e.message); }
+    done(btn);
+  }
+
+  // ---------- Research page for one topic ----------
+  function renderResearch() {
+    const [key, label, field, ph] = topicInfo(TOPIC);
+    const r = R(key), st = plan.stages[key];
+    const added = new Set(r.factors.map(f => f.name.toLowerCase()));
+    $("view-research").innerHTML = `
+      <a class="back" href="/calendar">← Back to calendar</a>
+      <h1>${label} ${stageBadge(st)}</h1>
+      <section class="panel pad">
+        <h3>1. Rough idea</h3>
+        <textarea rows="1" placeholder="${esc(ph)}" oninput="R('${key}').rough = this.value; grow(this); save()">${esc(r.rough)}</textarea>
+      </section>
+      <section class="panel pad">
+        <h3>2. My factors</h3>
+        <div class="hint">1 = nice to have, 3 = must. Hard rule = dealbreaker.</div>
+        <div>${r.factors.map((f, i) => `
+          <div class="factor"><span class="fname">${esc(f.name)}</span>
+            <div class="imp">${[1, 2, 3].map(n => `<button class="${f.imp === n ? "on" : ""}" onclick="setImp(${i}, ${n})">${n}</button>`).join("")}</div>
+            <label class="hard ${f.hard ? "on" : ""}"><input type="checkbox" ${f.hard ? "checked" : ""} onchange="setHard(${i}, this.checked)" />Hard rule</label>
+            <button class="fx" title="Remove" onclick="removeFactor(${i})">×</button></div>`).join("") || ""}</div>
+        <div class="chips">${(FACTOR_IDEAS[key] || []).filter(n => !added.has(n.toLowerCase())).map(n => `<button class="chip" onclick="addFactor(${JSON.stringify(n).replace(/"/g, "&quot;")})">+ ${esc(n)}</button>`).join("")}</div>
+        <input type="text" placeholder="+ add your own factor, then Enter" onkeydown="if(event.key==='Enter'){addFactor(this.value)}" />
+      </section>
+      <section class="panel pad">
+        <h3>3. Options</h3>
+        <button class="btn" id="opt-btn" onclick="getOptions()">✨ ${r.options ? "Get new options" : "Get AI options"}</button>
+        <div class="opts">${(r.options || []).map((o, i) => `
+          <div class="opt ${r.chosen === o.name ? "chosen" : ""}">
+            <h4>${esc(o.name)}</h4>
+            ${o.estimated_cost ? `<div class="cost">${esc(o.estimated_cost)}</div>` : ""}
+            <ul>${(o.why_it_fits || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+            ${(o.watch_out || []).length ? `<ul class="wo">${o.watch_out.map(x => `<li>⚠ ${esc(x)}</li>`).join("")}</ul>` : ""}
+            ${(o.trip_summary || []).length ? `<details><summary>More detail</summary><ul>${o.trip_summary.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
+            <button class="btn btn-sm" onclick="choose(${i})">${r.chosen === o.name ? "✓ Chosen" : "Choose this"}</button>
+          </div>`).join("")}</div>
+      </section>
+      <section class="panel pad">
+        <h3>4. My pick</h3>
+        <textarea id="pick" rows="1" placeholder="${esc(ph)}" oninput="grow(this)">${esc(plan[field])}</textarea>
+        <div class="actions">
+          <button class="btn" onclick="decide(2)">Save pick + back to calendar</button>
+          <button class="btn btn-line" onclick="decide(3)">🔒 Lock it in</button>
+        </div>
+      </section>`;
+    $("view-research").querySelectorAll("textarea").forEach(grow);
+  }
+  function setImp(i, n) { R(TOPIC).factors[i].imp = n; save(); renderResearch(); }
+  function setHard(i, on) { R(TOPIC).factors[i].hard = on; save(); renderResearch(); }
+  function removeFactor(i) { R(TOPIC).factors.splice(i, 1); save(); renderResearch(); }
+  function addFactor(name) {
+    name = String(name || "").trim();
+    if (!name) return;
+    R(TOPIC).factors.push({ name, imp: 2, hard: false });
+    save(); renderResearch();
+  }
+
+  async function getOptions() {
+    const btn = $("opt-btn"); busy(btn, "Finding options…");
+    try {
+      const data = await post("/api/options", { trip: tripForAI(), decide: AI_KEY[TOPIC] });
+      R(TOPIC).options = data.options || [];
+      save(); renderResearch();
+    } catch (e) { showError(e.message); done(btn); }
+  }
+  function choose(i) {
+    const o = R(TOPIC).options[i];
+    R(TOPIC).chosen = o.name;
+    const text = o.estimated_cost && ["budget", "stay", "flights"].includes(TOPIC) ? `${o.name} (${o.estimated_cost})` : o.name;
+    save(); renderResearch();
+    $("pick").value = text; grow($("pick"));
+    $("pick").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  // Save the pick at stage 2 (workshop) or 3 (locked), update the calendar, go back to it.
+  function decide(stage) {
+    const [key, , field] = topicInfo(TOPIC);
+    const text = $("pick").value.trim();
+    if (!text) { showError("Choose an option or type your pick first."); return; }
+    plan[field] = text;
+    plan.stages[key] = stage;
+    applyToCalendar(key, text);
+    save();
+    location.href = "/calendar";
+  }
+
+  // Some picks change the calendar's shape right away.
+  const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  function applyToCalendar(key, text) {
+    if (key === "length") {
+      const n = Number((text.match(/\d+/) || [])[0]);
+      if (n >= 1 && n <= 60) {
+        ensureDays(n);
+        while (plan.days.length > n && !plan.days[plan.days.length - 1].items.length) plan.days.pop();
+      }
+    }
+    if (key === "dates") {
+      const m = text.toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*(\d{1,2})?/);
+      if (m) {
+        const now = new Date(), month = MONTHS.indexOf(m[1]);
+        const day = m[2] ? Number(m[2]) : (/late/.test(text.toLowerCase()) ? 20 : /mid/.test(text.toLowerCase()) ? 12 : 1);
+        let year = now.getFullYear();
+        if (new Date(year, month, day) < now) year++;
+        plan.startDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      }
+    }
+  }
+
+  function loadSample() { plan = samplePlan(); save(); location.href = "/calendar"; }
+  function startOver() { plan = emptyPlan(); save(); location.href = "/calendar"; }
+
+  // Show the right view for this URL.
+  if (VIEW === "start") { $("view-start").hidden = false; renderStart(); }
+  else if (VIEW === "research") { $("view-research").hidden = false; renderResearch(); }
+  else { $("view-overview").hidden = false; renderStatic(); render(); }
+</script>
+</body>
+</html>
