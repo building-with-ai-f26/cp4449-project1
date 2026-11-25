@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nextstop · Trip calendar</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     /* Timetable look. Layout: Decisions (quiet sidebar, navigation) | itinerary (widest, the main content) | Budget (quiet sidebar).
        Exactly three type sizes: --l for section headings and the total, --m for activities and decision values,
@@ -13,10 +11,13 @@
     :root {
       --paper: #f2f0ea; --ink: #14171c; --signal: #e2541b;
       --mid: #5f5f5f; --light: #8f8c85; --hair: rgba(20, 23, 28, .18); --hover: rgba(20, 23, 28, .06);
-      --display: "Libre Caslon Display", "Didot", "Bodoni 72", Georgia, serif;
-      --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
-      --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-      --l: 30px; --m: 16px; --s: 13px;
+      /* One system font everywhere (no serif, no monospace). Weights: 400, 500, 600 only. */
+      --sys: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --display: var(--sys); --sans: var(--sys); --mono: var(--sys);
+      --h: 20px;     /* section headings (Antigua, Lake Atitlán), page titles */
+      --total: 28px; /* budget total */
+      --m: 15px;     /* body */
+      --s: 13px;     /* secondary / meta, sidebar titles */
       color-scheme: light;
     }
     * { box-sizing: border-box; }
@@ -24,12 +25,14 @@
            -webkit-font-smoothing: antialiased; }
     a { color: inherit; }
     h1, h2, h3, h4 { font-size: inherit; font-weight: inherit; margin: 0; }
+    b, strong, th { font-weight: 600; }   /* browsers default <b> to 700 */
+    summary { font-weight: 400; }
     :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-    .num, .date, .c, .d { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    .num, .date, .c, .d, .row, .cost, .of, .m { font-variant-numeric: tabular-nums; }
 
     /* Masthead */
     header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; padding: 18px 28px 0; }
-    .logo { font-family: var(--display); font-size: var(--l); line-height: 1; }
+    .logo { font-size: var(--h); font-weight: 600; line-height: 1; letter-spacing: -0.01em; }
     .logo span { color: var(--signal); }
     .header-links { display: flex; gap: 20px; flex-wrap: wrap; font-size: var(--s); }
     .link-btn { background: none; border: none; color: var(--mid); cursor: pointer; font: inherit; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
@@ -52,7 +55,7 @@
       #days { grid-column: 1; grid-row: 1; } #hl { grid-column: 1; grid-row: 2; } #budget { grid-column: 1; grid-row: 3; }
       header { padding: 16px 16px 0; } .masthead-rule { margin-left: 16px; margin-right: 16px; } #error { padding: 0 16px; }
     }
-    .side-title { font-family: var(--display); font-size: var(--l); line-height: 1; margin: 0 0 12px; color: var(--mid); }
+    .side-title { font-size: var(--s); font-weight: 600; line-height: 1.3; margin: 0 0 10px; color: var(--mid); }
 
     /* Decisions: each row is one link to its research page */
     #hl, #budget { position: sticky; top: 12px; color: var(--mid); }
@@ -72,7 +75,7 @@
     /* Itinerary: days grouped under their stop */
     .days { display: flex; flex-direction: column; gap: 32px; }
     .stop-group > h3 { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 0 0 14px; padding-bottom: 6px; border-bottom: 2px solid var(--ink); }
-    .stop-group > h3 .where { font-weight: 700; font-size: var(--l); line-height: 1.1; }
+    .stop-group > h3 .where { font-weight: 600; font-size: var(--h); line-height: 1.2; }
     .stop-group > h3 .date { font-size: var(--s); color: var(--mid); }
     .daygrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 24px 26px; }
     .daycol { display: flex; flex-direction: column; min-width: 0; }
@@ -95,11 +98,11 @@
     .add-day:hover { color: var(--ink); }
     .empty-days { color: var(--mid); max-width: 36ch; }
     .hero { max-width: 560px; }
-    .hero h2 { font-family: var(--display); font-size: var(--l); line-height: 1.1; margin: 0 0 8px; }
+    .hero h2 { font-size: var(--h); font-weight: 600; line-height: 1.2; margin: 0 0 8px; }
     .hero p { margin: 0 0 18px; color: var(--mid); }
 
     /* Budget: total, over/under, one subtotal per category that opens on click */
-    .big-total { font-family: var(--display); font-size: var(--l); line-height: 1; color: var(--ink); }
+    .big-total { font-size: var(--total); font-weight: 600; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
     .of { margin: 6px 0 14px; font-size: var(--s); }
     .of.over { color: var(--signal); }
     .cat { border-top: 1px solid var(--hair); }
@@ -143,11 +146,11 @@
     @media (max-width: 760px) { .page { padding: 0 16px 60px; } }
     .back { color: var(--mid); text-decoration: none; font-size: var(--s); }
     .back:hover { color: var(--ink); }
-    .page h1 { font-family: var(--display); font-size: var(--l); line-height: 1.1; margin: 8px 0 6px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+    .page h1 { font-weight: 600; font-size: var(--h); line-height: 1.1; margin: 8px 0 6px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
     .page h1 .st { font-family: var(--sans); }
     .lead { color: var(--mid); margin: 0 0 22px; }
     .pad { border-top: 2px solid var(--ink); padding: 12px 0 26px; }
-    .pad h3 { font-weight: 700; margin: 0 0 8px; }
+    .pad h3 { font-weight: 600; margin: 0 0 8px; }
     .hint { color: var(--mid); margin-bottom: 8px; font-size: var(--s); }
     .knowns { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 6px 18px; align-items: end; max-width: 760px; }
     @media (max-width: 600px) { .knowns { grid-template-columns: minmax(0, 1fr); } }
@@ -175,7 +178,7 @@
     /* AI options, side by side */
     .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 28px; margin-top: 18px; }
     .opt { display: flex; flex-direction: column; gap: 8px; }
-    .opt h4 { font-weight: 700; }
+    .opt h4 { font-weight: 600; }
     .opt.chosen h4::before { content: "✓ "; }
     .opt .cost { font-family: var(--mono); font-size: var(--s); }
     .opt ul { margin: 0; padding-left: 18px; }
