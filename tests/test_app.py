@@ -121,6 +121,20 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class CalendarPagesTest(unittest.TestCase):
+    def setUp(self):
+        from app import app
+        self.client = app.test_client()
+
+    def test_pages_load(self):
+        for url in ["/calendar", "/calendar/start", "/research/where", "/research/budget"]:
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    def test_unknown_research_topic_is_404(self):
+        self.assertEqual(self.client.get("/research/nope").status_code, 404)
+        self.assertEqual(self.client.get("/research/<script>").status_code, 404)
+
+
 class SecurityTest(unittest.TestCase):
     """Build 3 hardening. These send bad bodies, so no AI call (and no cost) ever happens."""
 

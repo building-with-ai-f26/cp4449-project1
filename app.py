@@ -358,13 +358,35 @@ def normalize_sandbox(data):
     return out
 
 
-@app.route("/calendar")
-def calendar():
+# The 7 topics that get a research page (/research/<topic>). Same template as the calendar, different view.
+RESEARCH_TOPICS = {"where", "dates", "length", "activities", "stay", "flights", "budget"}
+
+
+def calendar_page(view, topic=""):
     return render_template(
         "calendar.html",
+        view=view,
+        topic=topic,
         posthog_key=os.getenv("POSTHOG_KEY", ""),
         posthog_host=os.getenv("POSTHOG_HOST", "https://us.i.posthog.com"),
     )
+
+
+@app.route("/calendar")
+def calendar():
+    return calendar_page("overview")
+
+
+@app.route("/calendar/start")
+def calendar_start():
+    return calendar_page("start")
+
+
+@app.route("/research/<topic>")
+def research(topic):
+    if topic not in RESEARCH_TOPICS:
+        raise NotFound()
+    return calendar_page("research", topic)
 
 
 @app.post("/api/sandbox")

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nextstop · Trip calendar</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg: #f6f5f3; --card: #fff; --text: #1c2526; --muted: #78716c; --faint: #a8a29e;
@@ -15,7 +15,7 @@
       --radius: 14px; --shadow: 0 1px 2px rgba(28,25,23,.04), 0 2px 8px rgba(28,25,23,.04);
     }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    body { margin: 0; font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
            color: var(--text); line-height: 1.45; -webkit-font-smoothing: antialiased;
            background: var(--bg) radial-gradient(#dedad5 1px, transparent 1px) 0 0 / 20px 20px; }
     header { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px 10px; gap: 12px; flex-wrap: wrap; }
@@ -103,6 +103,78 @@
     .flag-list { color: #b42d18; font-weight: 700; font-size: 12px; border-bottom: 1px dashed var(--flag); padding-bottom: 6px; }
     .flag-list ul { margin: 2px 0 0; padding-left: 14px; }
     .note { font-size: 12px; color: var(--faint); text-align: center; margin: 0 0 30px; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: #fff; border: none; border-radius: 9px; padding: 9px 14px;
+           font: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; text-decoration: none; }
+    .btn:hover:not(:disabled) { background: var(--accent-dark); }
+    .btn:disabled { opacity: .55; cursor: wait; }
+    .btn-line { background: #fff; color: var(--accent-dark); border: 1px solid var(--line-strong); }
+    .btn-line:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
+    .btn-sm { padding: 4px 11px; font-size: 12px; border-radius: 7px; }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.5); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+    .btn-line .spinner { border-color: var(--line); border-top-color: var(--accent); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Side panel: read-only summary + Open */
+    .st { font-size: 11.5px; font-weight: 800; padding: 1px 8px; border-radius: 99px; background: #f1f0ee; color: var(--faint); }
+    .st.s1 { background: #f1f0ee; color: #57534e; } .st.s2 { background: #fde9cc; color: #9a3f12; } .st.s3 { background: #cdebe5; color: var(--accent-dark); }
+    .pick-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .pick { font-size: 13px; }
+    .pick .rough { color: var(--muted); font-style: italic; }
+
+    /* Toolbar over the calendar */
+    .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .toolbar .hint { flex: 1; min-width: 200px; }
+    .hero { width: 420px; max-width: 100%; text-align: center; padding: 36px 28px; }
+    .hero h2 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.02em; }
+    .hero p { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
+
+    /* Start + research pages */
+    .page { max-width: 1000px; margin: 0 auto; padding: 4px 28px 60px; }
+    @media (max-width: 760px) { .page { padding: 4px 16px 60px; } }
+    .back { color: var(--muted); font-weight: 700; font-size: 13px; text-decoration: none; }
+    .back:hover { color: var(--accent); }
+    .page h1 { font-size: 28px; letter-spacing: -0.02em; margin: 8px 0 4px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .lead { color: var(--muted); margin: 0 0 18px; font-size: 14.5px; }
+    .pad { padding: 20px; margin-bottom: 16px; }
+    .pad h3 { margin: 0 0 4px; font-size: 15px; }
+    .pad > .hint { margin-bottom: 10px; }
+    .knowns { display: grid; grid-template-columns: 170px 1fr; gap: 10px 14px; align-items: center; }
+    @media (max-width: 600px) { .knowns { grid-template-columns: 1fr; } }
+    .knowns label { font-weight: 800; font-size: 13.5px; }
+    .suggest { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--line); }
+    .suggest:first-of-type { border-top: none; }
+    .suggest .n { font-weight: 800; font-size: 13px; color: var(--faint); width: 22px; }
+    .suggest .r { flex: 1; font-size: 13.5px; }
+    .suggest .r b { display: block; font-size: 14.5px; }
+    /* Factors */
+    .factor { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    .factor:first-child { border-top: none; }
+    .factor .fname { flex: 1; min-width: 140px; font-weight: 700; font-size: 13.5px; }
+    .imp { display: flex; background: #f1f0ee; border-radius: 7px; padding: 2px; gap: 1px; }
+    .imp button { font: inherit; font-size: 11.5px; font-weight: 700; border: none; background: transparent; color: var(--muted); padding: 2px 9px; border-radius: 5px; cursor: pointer; }
+    .imp button.on { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .hard { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; user-select: none; }
+    .hard input { accent-color: var(--flag); }
+    .hard.on { color: #b42d18; }
+    .fx { border: none; background: none; color: var(--faint); cursor: pointer; font-size: 15px; }
+    .fx:hover { color: var(--flag); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+    .chip { font: inherit; font-size: 12px; font-weight: 700; border: 1px dashed var(--line-strong); background: #fff; color: var(--muted); border-radius: 99px; padding: 3px 10px; cursor: pointer; }
+    .chip:hover { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-soft); }
+    /* AI options */
+    .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; margin-top: 12px; }
+    .opt { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px; background: #fff; }
+    .opt.chosen { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    .opt h4 { margin: 0; font-size: 15px; }
+    .opt .cost { font-weight: 800; color: var(--accent-dark); font-size: 13px; }
+    .opt ul { margin: 0; padding-left: 17px; font-size: 12.5px; }
+    .opt .wo { color: var(--warn-text); }
+    .opt details { font-size: 12.5px; color: var(--muted); }
+    .opt summary { cursor: pointer; font-weight: 700; }
+    .opt .btn { align-self: flex-start; margin-top: auto; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
   </style>
   {% if posthog_key %}
   <script>
@@ -122,18 +194,27 @@
   </header>
   <div id="error"></div>
 
-  <div class="layout">
-    <aside class="panel" id="hl"></aside>
-    <div class="board">
-      <div class="days" id="days"></div>
-      <section class="panel" id="budget"></section>
+  <div id="view-overview" hidden>
+    <div class="layout">
+      <aside class="panel" id="hl"></aside>
+      <div>
+        <div class="toolbar" id="toolbar"></div>
+        <div class="board">
+          <div class="days" id="days"></div>
+          <section class="panel" id="budget"></section>
+        </div>
+      </div>
     </div>
   </div>
+  <div id="view-start" class="page" hidden></div>
+  <div id="view-research" class="page" hidden></div>
   <p class="note">Costs and travel times are AI estimates, not live prices. Double-check before booking.</p>
 
 <script>
   // The whole plan lives in this browser (and localStorage). The server only calls the AI.
   const STORE = "nextstop-calendar-v1";
+  const VIEW = {{ view | tojson }};      // "overview" (calendar), "start", or "research"
+  const TOPIC = {{ topic | tojson }};    // which research page, e.g. "where"
   // Every decision, in the High level column: [key, label, plan field, placeholder]
   const TOPICS = [
     ["where", "Where", "where", "e.g. Guatemala"],
@@ -144,6 +225,20 @@
     ["flights", "Flights", "flightsNote", "e.g. cheapest round trip"],
     ["budget", "Budget", "budget", "e.g. cheap, ~$1,200 total"],
   ];
+  const topicInfo = (key) => TOPICS.find(t => t[0] === key);
+  // The server's AI routes use slightly different names for two topics.
+  const AI_KEY = { where: "where", dates: "when", length: "length", activities: "activities", stay: "stay", flights: "transport", budget: "budget" };
+  const FROM_AI_KEY = Object.fromEntries(Object.entries(AI_KEY).map(([k, v]) => [v, k]));
+  // Prompts for "My factors", so it's not just a blank box.
+  const FACTOR_IDEAS = {
+    where: ["Cheap to get to", "Warm weather", "Short flight", "Good hiking", "Not too touristy", "Safe for solo travel", "Good food"],
+    dates: ["Avoid holidays", "Good weather", "Cheaper flights", "Days off work", "Fewer crowds", "Local festivals"],
+    length: ["Days off work", "Enough time for activities", "Cost per day", "Not too rushed", "Jet lag recovery"],
+    activities: ["Hiking", "Beaches / water", "Food", "Culture & history", "Nightlife", "Rest days", "Adventure"],
+    stay: ["Price per night", "Walkable area", "Quiet", "Kitchen", "AC", "Pool", "Meet other travelers"],
+    flights: ["Cheapest", "Fastest", "Nonstop", "No red-eyes", "Carry-on only", "Good times of day"],
+    budget: ["Hard max", "Splurge on activities", "Save on stays", "Include food", "Leave a buffer"],
+  };
   const STAGE_NAME = { 1: "Rough idea", 2: "Workshopping", 3: "Locked in" };
   const STAGE_SHORT = { 1: "Rough", 2: "Workshop", 3: "Locked" };
   const KIND_ICON = { flight: "✈️", transport: "🚐", activity: "🥾", rest: "😌", custom: "" };
@@ -152,6 +247,7 @@
     origin: "", where: "", what: "", budget: "", length: "", when: "", stay: "",
     flightsNote: "", startDate: "", thoughts: "",
     stages: {},        // topic key -> 1 rough idea, 2 workshopping, 3 locked in (missing = not started)
+    research: {},      // topic key -> { rough, factors: [{ name, imp: 1|2|3, hard }], options: [AI options], chosen }
     days: [],          // [{ items: [{ uid, id, part, of, title, kind, leg, est_cost, watch_out, src }] }]
     sandbox: [],       // not-yet-placed building blocks: { id, title, kind, leg, days, est_cost, why, watch_out }
     legs: {},          // { "Antigua": { nightly, stay_note, order } }
@@ -170,6 +266,15 @@
       what: "Acatenango hike, the lake, Tikal ruins", stay: "Cheap guesthouses, one lakeside", flightsNote: "From JFK, cheapest round trip",
       budget: "~$1,200 total",
       stages: { where: 2, dates: 2, length: 3, activities: 2, stay: 2, flights: 1, budget: 2 },
+      research: {
+        where: { rough: "Somewhere warm and cheap in Central America", factors: [{ name: "Cheap to get to", imp: 3, hard: false }, { name: "Good hiking", imp: 3, hard: false }, { name: "Safe for solo travel", imp: 3, hard: true }] },
+        dates: { rough: "Sometime in spring", factors: [{ name: "Avoid holidays", imp: 2, hard: false }, { name: "Days off work", imp: 3, hard: true }] },
+        length: { rough: "7–10 days", factors: [{ name: "Days off work", imp: 3, hard: true }, { name: "Enough time for activities", imp: 3, hard: false }] },
+        activities: { rough: "Hiking + some lake time", factors: [{ name: "Hiking", imp: 3, hard: false }, { name: "Rest days", imp: 1, hard: false }] },
+        stay: { rough: "Cheap but nice", factors: [{ name: "Price per night", imp: 3, hard: false }, { name: "Quiet", imp: 2, hard: false }] },
+        flights: { rough: "Cheapest round trip from NYC", factors: [{ name: "Cheapest", imp: 3, hard: false }, { name: "No red-eyes", imp: 1, hard: false }] },
+        budget: { rough: "Cheap", factors: [{ name: "Hard max", imp: 3, hard: true }] },
+      },
       origin: "New York", startDate: "2027-04-10",
       legs: { "Antigua": { nightly: 35, order: 0 }, "Lake Atitlán": { nightly: 50, order: 1 }, "Tikal": { nightly: 35, order: 2 } },
       flights: { route: "JFK ⇄ Guatemala City", est_cost: 480 },
@@ -201,8 +306,8 @@
   const box = (k, ph, rows = 2) => `<textarea rows="${rows}" placeholder="${esc(ph)}" oninput="plan['${k}'] = this.value; grow(this); save(); renderBudget()">${esc(plan[k])}</textarea>`;
 
   function load() {
-    try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.days)) return { ...emptyPlan(), ...s, stages: s.stages || {} }; } catch (e) {}
-    return samplePlan();
+    try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.days)) return { ...emptyPlan(), ...s, stages: s.stages || {}, research: s.research || {} }; } catch (e) {}
+    return emptyPlan();   // new visitors start with an empty calendar
   }
   function save() { try { localStorage.setItem(STORE, JSON.stringify(plan)); } catch (e) {} }
   function showError(msg) { $("error").innerHTML = msg ? `<div class="error">${esc(msg)}</div>` : ""; }
@@ -274,35 +379,46 @@
 
   // ---------- rendering ----------
   function render() {
-    renderDays(); renderBudget();
+    renderDays(); renderBudget(); renderToolbar();
     save();
   }
 
-  // Columns with text boxes are drawn once (so typing isn't interrupted).
+  // Research notes for one topic (created on first use).
+  function R(key) {
+    plan.research[key] = plan.research[key] || { rough: "", factors: [], options: null, chosen: null };
+    return plan.research[key];
+  }
+  // What a topic currently says: its pick if there is one, otherwise the rough idea.
+  const pickOf = (key) => (plan[topicInfo(key)[2]] || "").trim();
+  const stageBadge = (st) => `<span class="st ${st ? "s" + st : ""}">${st ? STAGE_SHORT[st] : "Not started"}</span>`;
+
+  // Left side panel: each topic's status as text + an Open button to its research page.
   function renderStatic() {
     $("hl").innerHTML = `
       <div class="col-title">High level</div>
-      ${TOPICS.map(([key, label, field, ph]) => {
-        const st = plan.stages[key];
+      ${TOPICS.map(([key, label]) => {
+        const pick = pickOf(key), rough = (R(key).rough || "").trim();
         return `
         <div class="topic">
-          <div class="topic-head"><span class="lbl">${label}</span>
-            <div class="stages" title="${st ? STAGE_NAME[st] : "Not started"}">${[1, 2, 3].map(n => `<button class="s${n} ${st === n ? "on" : ""}" title="${STAGE_NAME[n]}"
-              onclick="setStage('${key}', ${n})">${STAGE_SHORT[n]}</button>`).join("")}</div>
+          <div class="topic-head"><span class="lbl">${label}</span>${stageBadge(plan.stages[key])}</div>
+          <div class="pick-row">
+            <div class="pick">${pick ? esc(pick) : rough ? `<span class="rough">${esc(rough)}</span>` : `<span class="tbd">Nothing yet</span>`}</div>
+            <a class="btn btn-line btn-sm" href="/research/${key}">Open</a>
           </div>
-          ${box(field, ph, 1)}
         </div>`;
       }).join("")}`;
-    $("hl").querySelectorAll("textarea").forEach(grow);
+  }
+
+  // Above the calendar: start button when empty, AI fill button once Where is known.
+  function renderToolbar() {
+    const where = pickOf("where") || R("where").rough;
+    $("toolbar").innerHTML = where
+      ? `<button class="btn" id="fill-btn" onclick="fillCalendar()">✨ Fill calendar with AI ideas</button>`
+      : "";
   }
   // Text boxes grow to fit what you type (no inner scrollbars).
   function grow(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; }
-
-  // Click a stage to set it; click the one that's already on to go back to "Not started".
-  function setStage(key, n) {
-    if (plan.stages[key] === n) delete plan.stages[key]; else plan.stages[key] = n;
-    save(); renderStatic();
-  }
+  const isEmpty = () => !plan.days.length && !Object.keys(plan.stages).length;
 
   function renderDays() {
     const cols = plan.days.map((d, i) => {
@@ -329,7 +445,13 @@
           </div>
         </div>`;
     }).join("");
-    $("days").innerHTML = (cols || `<div class="empty-days">No days yet. Click <strong>+ day</strong> to start.</div>`) +
+    if (isEmpty()) {
+      $("days").innerHTML = `<div class="panel hero"><h2>Your calendar is empty</h2>
+        <p>Start with what you already know.</p>
+        <a class="btn" href="/calendar/start">Start planning your trip →</a></div>`;
+      return;
+    }
+    $("days").innerHTML = (cols || `<div class="empty-days">No days yet. Pick <b>How many days</b>, or click <strong>+ day</strong>.</div>`) +
       `<div class="add-day" onclick="insertDay(${plan.days.length - 1})">+<br>day</div>`;
   }
 
@@ -344,14 +466,14 @@
     const acts = b.extras.filter(it => it.kind !== "transport");
     const trans = b.extras.filter(it => it.kind === "transport");
     // Your budget number, pulled from the Budget text in High level ("~$1,200 total" -> 1200)
-    const m = String(plan.budget).replace(/,/g, "").match(/\d+/);
+    const m = String(plan.budget || R("budget").rough).replace(/,/g, "").match(/\d+/);
     const target = m ? Number(m[0]) : 0;
     const over = target && b.total > target;
     el.innerHTML = `
       <div class="col-title">Budget</div>
       ${f.length ? `<div class="flag-list">Since your saved version:<ul>${f.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
       <div class="big-total">${b.days ? "~" + money(b.total) : "<span class='tbd'>TBD</span>"}</div>
-      <div class="of">${target ? (over ? `${money(b.total - target)} over your ${money(target)}` : `${money(target - b.total)} left of ${money(target)}`) : "Add a budget in High level"}</div>
+      <div class="of">${target ? (over ? `${money(b.total - target)} over your ${money(target)}` : `${money(target - b.total)} left of ${money(target)}`) : ""}</div>
       ${target ? `<div class="bar ${over ? "over" : ""}"><i style="width:${Math.min(100, b.total / target * 100)}%"></i></div>` : ""}
       <div class="group">Flights</div>
       ${line(plan.flights ? esc(plan.flights.route) : "Flights", plan.flights ? b.flights : null)}
@@ -401,20 +523,214 @@
     render();
   }
 
-  function loadSample() {
-    plan = samplePlan();
-    renderStatic();
-    render();
+  // ---------- AI helpers (reuse the existing, rate-limited /api routes) ----------
+  // The trip as the AI routes expect it: picks at stage 2+ count as decided, the rest are starting ideas,
+  // and each topic's factors become its preferences (hard rules marked so the AI never breaks them).
+  function tripForAI() {
+    const trip = { origin: plan.origin, notes: "", decided: {}, ideas: {}, prefs: {} };
+    for (const [key] of TOPICS) {
+      const k = AI_KEY[key], r = R(key), pick = pickOf(key);
+      if (pick && (plan.stages[key] || 0) >= 2) trip.decided[k] = pick;
+      else if (pick || r.rough) trip.ideas[k] = pick || r.rough;
+      const f = (r.factors || []).map(x => `${x.name} (${x.hard ? "HARD RULE, never break" : ["", "low", "medium", "high"][x.imp] + " importance"})`);
+      if (f.length) trip.prefs[k] = f.join("; ");
+    }
+    return trip;
+  }
+  async function post(url, body) {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || "Something went wrong. Try again.");
+    return data;
+  }
+  function busy(btn, label) { btn.disabled = true; btn.dataset.label = btn.innerHTML; btn.innerHTML = `<span class="spinner"></span>${label}`; }
+  function done(btn) { btn.disabled = false; btn.innerHTML = btn.dataset.label; }
+
+  // ---------- Start: what you know already -> what to decide first ----------
+  function renderStart() {
+    $("view-start").innerHTML = `
+      <a class="back" href="/calendar">← Back to calendar</a>
+      <h1>Start planning your trip</h1>
+      <p class="lead">Rough is fine. Skip what you don't know.</p>
+      <section class="panel pad">
+        <div class="knowns">
+          <label for="k-origin">Leaving from</label><input type="text" id="k-origin" value="${esc(plan.origin)}" placeholder="e.g. New York" />
+          ${TOPICS.map(([key, label, , ph]) => `<label for="k-${key}">${label}</label>
+            <input type="text" id="k-${key}" value="${esc(R(key).rough || pickOf(key))}" placeholder="${esc(ph)}" />`).join("")}
+        </div>
+        <div class="actions"><button class="btn" id="first-btn" onclick="saveKnowns()">Next: what should I decide first? →</button></div>
+      </section>
+      <section id="first"></section>`;
   }
 
-  function startOver() {
-    plan = emptyPlan();
-    renderStatic();
-    render();
+  async function saveKnowns() {
+    plan.origin = $("k-origin").value.trim();
+    for (const [key] of TOPICS) {
+      const v = $("k-" + key).value.trim();
+      R(key).rough = v;
+      if (v && !plan.stages[key]) plan.stages[key] = 1;
+    }
+    save();
+    const btn = $("first-btn"); busy(btn, "Thinking about what to decide first…");
+    try {
+      const data = await post("/api/next", { trip: tripForAI() });
+      const list = (data.suggestions || []).map(s => ({ ...s, key: FROM_AI_KEY[s.category] })).filter(s => s.key);
+      $("first").innerHTML = `<section class="panel pad"><h3>What to decide first</h3>
+        ${list.map((s, i) => `<div class="suggest"><span class="n">${i + 1}</span>
+          <div class="r"><b>${topicInfo(s.key)[1]}</b>${esc(s.reason)}</div>
+          <a class="btn ${i ? "btn-line" : ""} btn-sm" href="/research/${s.key}">Research this →</a></div>`).join("")}
+        <div class="actions"><a class="btn btn-line" href="/calendar">Go to my calendar</a></div></section>`;
+      $("first").scrollIntoView({ behavior: "smooth" });
+    } catch (e) { showError(e.message); }
+    done(btn);
   }
 
-  renderStatic();
-  render();
+  // ---------- Research page for one topic ----------
+  function renderResearch() {
+    const [key, label, field, ph] = topicInfo(TOPIC);
+    const r = R(key), st = plan.stages[key];
+    const added = new Set(r.factors.map(f => f.name.toLowerCase()));
+    $("view-research").innerHTML = `
+      <a class="back" href="/calendar">← Back to calendar</a>
+      <h1>${label} ${stageBadge(st)}</h1>
+      <section class="panel pad">
+        <h3>1. Rough idea</h3>
+        <textarea rows="1" placeholder="${esc(ph)}" oninput="R('${key}').rough = this.value; grow(this); save()">${esc(r.rough)}</textarea>
+      </section>
+      <section class="panel pad">
+        <h3>2. My factors</h3>
+        <div class="hint">1 = nice to have, 3 = must. Hard rule = dealbreaker.</div>
+        <div>${r.factors.map((f, i) => `
+          <div class="factor"><span class="fname">${esc(f.name)}</span>
+            <div class="imp">${[1, 2, 3].map(n => `<button class="${f.imp === n ? "on" : ""}" onclick="setImp(${i}, ${n})">${n}</button>`).join("")}</div>
+            <label class="hard ${f.hard ? "on" : ""}"><input type="checkbox" ${f.hard ? "checked" : ""} onchange="setHard(${i}, this.checked)" />Hard rule</label>
+            <button class="fx" title="Remove" onclick="removeFactor(${i})">×</button></div>`).join("") || ""}</div>
+        <div class="chips">${(FACTOR_IDEAS[key] || []).filter(n => !added.has(n.toLowerCase())).map(n => `<button class="chip" onclick="addFactor(${JSON.stringify(n).replace(/"/g, "&quot;")})">+ ${esc(n)}</button>`).join("")}</div>
+        <input type="text" placeholder="+ add your own factor, then Enter" onkeydown="if(event.key==='Enter'){addFactor(this.value)}" />
+      </section>
+      <section class="panel pad">
+        <h3>3. Options</h3>
+        <button class="btn" id="opt-btn" onclick="getOptions()">✨ ${r.options ? "Get new options" : "Get AI options"}</button>
+        <div class="opts">${(r.options || []).map((o, i) => `
+          <div class="opt ${r.chosen === o.name ? "chosen" : ""}">
+            <h4>${esc(o.name)}</h4>
+            ${o.estimated_cost ? `<div class="cost">${esc(o.estimated_cost)}</div>` : ""}
+            <ul>${(o.why_it_fits || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+            ${(o.watch_out || []).length ? `<ul class="wo">${o.watch_out.map(x => `<li>⚠ ${esc(x)}</li>`).join("")}</ul>` : ""}
+            ${(o.trip_summary || []).length ? `<details><summary>More detail</summary><ul>${o.trip_summary.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
+            <button class="btn btn-sm" onclick="choose(${i})">${r.chosen === o.name ? "✓ Chosen" : "Choose this"}</button>
+          </div>`).join("")}</div>
+      </section>
+      <section class="panel pad">
+        <h3>4. My pick</h3>
+        <textarea id="pick" rows="1" placeholder="${esc(ph)}" oninput="grow(this)">${esc(plan[field])}</textarea>
+        <div class="actions">
+          <button class="btn" onclick="decide(2)">Save pick + back to calendar</button>
+          <button class="btn btn-line" onclick="decide(3)">🔒 Lock it in</button>
+        </div>
+      </section>`;
+    $("view-research").querySelectorAll("textarea").forEach(grow);
+  }
+  function setImp(i, n) { R(TOPIC).factors[i].imp = n; save(); renderResearch(); }
+  function setHard(i, on) { R(TOPIC).factors[i].hard = on; save(); renderResearch(); }
+  function removeFactor(i) { R(TOPIC).factors.splice(i, 1); save(); renderResearch(); }
+  function addFactor(name) {
+    name = String(name || "").trim();
+    if (!name) return;
+    R(TOPIC).factors.push({ name, imp: 2, hard: false });
+    save(); renderResearch();
+  }
+
+  async function getOptions() {
+    const btn = $("opt-btn"); busy(btn, "Finding options…");
+    try {
+      const data = await post("/api/options", { trip: tripForAI(), decide: AI_KEY[TOPIC] });
+      R(TOPIC).options = data.options || [];
+      save(); renderResearch();
+    } catch (e) { showError(e.message); done(btn); }
+  }
+  function choose(i) {
+    const o = R(TOPIC).options[i];
+    R(TOPIC).chosen = o.name;
+    const text = o.estimated_cost && ["budget", "stay", "flights"].includes(TOPIC) ? `${o.name} (${o.estimated_cost})` : o.name;
+    save(); renderResearch();
+    $("pick").value = text; grow($("pick"));
+    $("pick").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  // Save the pick at stage 2 (workshop) or 3 (locked), update the calendar, go back to it.
+  function decide(stage) {
+    const [key, , field] = topicInfo(TOPIC);
+    const text = $("pick").value.trim();
+    if (!text) { showError("Choose an option or type your pick first."); return; }
+    plan[field] = text;
+    plan.stages[key] = stage;
+    applyToCalendar(key, text);
+    save();
+    location.href = "/calendar";
+  }
+
+  // Some picks change the calendar's shape right away.
+  const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  function applyToCalendar(key, text) {
+    if (key === "length") {
+      const n = Number((text.match(/\d+/) || [])[0]);
+      if (n >= 1 && n <= 60) {
+        ensureDays(n);
+        while (plan.days.length > n && !plan.days[plan.days.length - 1].items.length) plan.days.pop();
+      }
+    }
+    if (key === "dates") {
+      const m = text.toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*(\d{1,2})?/);
+      if (m) {
+        const now = new Date(), month = MONTHS.indexOf(m[1]);
+        const day = m[2] ? Number(m[2]) : (/late/.test(text.toLowerCase()) ? 20 : /mid/.test(text.toLowerCase()) ? 12 : 1);
+        let year = now.getFullYear();
+        if (new Date(year, month, day) < now) year++;
+        plan.startDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      }
+    }
+  }
+
+  // ---------- AI: sketch the days (uses the existing /api/sandbox route) ----------
+  async function fillCalendar() {
+    const btn = $("fill-btn"); busy(btn, "Sketching your days…");
+    try {
+      const v = (key) => pickOf(key) || R(key).rough;
+      const data = await post("/api/sandbox", { plan: { origin: plan.origin, where: v("where"), what: v("activities"),
+        budget: v("budget"), length: v("length"), when: v("dates"), stay: v("stay") } });
+      const days = [];
+      const at = (i) => (days[i] = days[i] || { items: [] });
+      let cursor = 0;
+      plan.legs = {};
+      data.legs.forEach((leg, li) => {
+        plan.legs[leg.name] = { nightly: leg.nightly, stay_note: leg.stay_note, order: li };
+        for (const it of leg.items) {
+          const id = uid();
+          for (let p = 0; p < it.days; p++) {
+            at(cursor + p).items.push({ uid: uid(), id, part: p + 1, of: it.days, title: it.title, kind: it.kind, leg: leg.name,
+              est_cost: p === 0 ? it.est_cost : 0, watch_out: it.watch_out });
+          }
+          // Getting somewhere shares the day with what comes next; everything else takes its own day(s).
+          cursor += it.kind === "transport" || it.kind === "flight" ? Math.max(0, it.days - 1) : it.days;
+        }
+      });
+      const want = Number(((v("length") || "").match(/\d+/) || [])[0]) || data.suggested_days || days.length;
+      for (let i = 0; i < Math.max(want, days.length); i++) at(i);
+      plan.days = days;
+      if (data.flights) plan.flights = data.flights;
+      if (data.food_per_day) plan.foodPerDay = data.food_per_day;
+      if (!plan.stages.activities) plan.stages.activities = 2;
+      renderStatic(); render();
+    } catch (e) { showError(e.message); done(btn); }
+  }
+
+  function loadSample() { plan = samplePlan(); save(); location.href = "/calendar"; }
+  function startOver() { plan = emptyPlan(); save(); location.href = "/calendar"; }
+
+  // Show the right view for this URL.
+  if (VIEW === "start") { $("view-start").hidden = false; renderStart(); }
+  else if (VIEW === "research") { $("view-research").hidden = false; renderResearch(); }
+  else { $("view-overview").hidden = false; renderStatic(); render(); }
 </script>
 </body>
 </html>
