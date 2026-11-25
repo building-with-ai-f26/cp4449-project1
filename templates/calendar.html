@@ -124,8 +124,6 @@
     .pick .rough { color: var(--muted); font-style: italic; }
 
     /* Toolbar over the calendar */
-    .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-    .toolbar .hint { flex: 1; min-width: 200px; }
     .hero { width: 420px; max-width: 100%; text-align: center; padding: 36px 28px; }
     .hero h2 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.02em; }
     .hero p { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
@@ -198,7 +196,6 @@
     <div class="layout">
       <aside class="panel" id="hl"></aside>
       <div>
-        <div class="toolbar" id="toolbar"></div>
         <div class="board">
           <div class="days" id="days"></div>
           <section class="panel" id="budget"></section>
@@ -379,7 +376,7 @@
 
   // ---------- rendering ----------
   function render() {
-    renderDays(); renderBudget(); renderToolbar();
+    renderDays(); renderBudget();
     save();
   }
 
@@ -403,19 +400,12 @@
           <div class="topic-head"><span class="lbl">${label}</span>${stageBadge(plan.stages[key])}</div>
           <div class="pick-row">
             <div class="pick">${pick ? esc(pick) : rough ? `<span class="rough">${esc(rough)}</span>` : `<span class="tbd">Nothing yet</span>`}</div>
-            <a class="btn btn-line btn-sm" href="/research/${key}">Open</a>
+            <a class="btn btn-sm" href="/research/${key}">Open</a>
           </div>
         </div>`;
       }).join("")}`;
   }
 
-  // Above the calendar: start button when empty, AI fill button once Where is known.
-  function renderToolbar() {
-    const where = pickOf("where") || R("where").rough;
-    $("toolbar").innerHTML = where
-      ? `<button class="btn" id="fill-btn" onclick="fillCalendar()">✨ Fill calendar with AI ideas</button>`
-      : "";
-  }
   // Text boxes grow to fit what you type (no inner scrollbars).
   function grow(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; }
   const isEmpty = () => !plan.days.length && !Object.keys(plan.stages).length;
@@ -689,39 +679,6 @@
         plan.startDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       }
     }
-  }
-
-  // ---------- AI: sketch the days (uses the existing /api/sandbox route) ----------
-  async function fillCalendar() {
-    const btn = $("fill-btn"); busy(btn, "Sketching your days…");
-    try {
-      const v = (key) => pickOf(key) || R(key).rough;
-      const data = await post("/api/sandbox", { plan: { origin: plan.origin, where: v("where"), what: v("activities"),
-        budget: v("budget"), length: v("length"), when: v("dates"), stay: v("stay") } });
-      const days = [];
-      const at = (i) => (days[i] = days[i] || { items: [] });
-      let cursor = 0;
-      plan.legs = {};
-      data.legs.forEach((leg, li) => {
-        plan.legs[leg.name] = { nightly: leg.nightly, stay_note: leg.stay_note, order: li };
-        for (const it of leg.items) {
-          const id = uid();
-          for (let p = 0; p < it.days; p++) {
-            at(cursor + p).items.push({ uid: uid(), id, part: p + 1, of: it.days, title: it.title, kind: it.kind, leg: leg.name,
-              est_cost: p === 0 ? it.est_cost : 0, watch_out: it.watch_out });
-          }
-          // Getting somewhere shares the day with what comes next; everything else takes its own day(s).
-          cursor += it.kind === "transport" || it.kind === "flight" ? Math.max(0, it.days - 1) : it.days;
-        }
-      });
-      const want = Number(((v("length") || "").match(/\d+/) || [])[0]) || data.suggested_days || days.length;
-      for (let i = 0; i < Math.max(want, days.length); i++) at(i);
-      plan.days = days;
-      if (data.flights) plan.flights = data.flights;
-      if (data.food_per_day) plan.foodPerDay = data.food_per_day;
-      if (!plan.stages.activities) plan.stages.activities = 2;
-      renderStatic(); render();
-    } catch (e) { showError(e.message); done(btn); }
   }
 
   function loadSample() { plan = samplePlan(); save(); location.href = "/calendar"; }
