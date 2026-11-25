@@ -39,6 +39,17 @@
     .col-note { text-align: center; color: var(--muted); font-size: 11.5px; }
     .col.wide { width: 230px; }
     .lbl { font-weight: 800; font-size: 12.5px; }
+    .topic { display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; border-bottom: 1px dashed var(--soft-line); }
+    .topic:last-child { border-bottom: none; }
+    .topic-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+    .topic-state { font-size: 10.5px; font-weight: 700; color: var(--muted); }
+    .stages { display: flex; gap: 3px; }
+    .stages button { flex: 1; font: inherit; font-size: 10.5px; font-weight: 700; padding: 2px 0; border-radius: 4px; cursor: pointer;
+                     border: 1px solid var(--soft-line); background: #fff; color: var(--muted); }
+    .stages button:hover { border-color: var(--line); }
+    .stages button.on.s1 { background: #f5f5f4; border-color: #a8a29e; color: #57534e; }
+    .stages button.on.s2 { background: #fff4e6; border-color: #d97706; color: #9a3f12; }
+    .stages button.on.s3 { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-dark); }
     textarea, input[type=text], input[type=date] { width: 100%; font: inherit; font-size: 12.5px; border: 1px solid var(--soft-line);
       border-radius: 4px; padding: 5px 7px; background: #fff; color: var(--text); resize: vertical; }
     textarea:focus, input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
@@ -122,7 +133,7 @@
   <div id="error"></div>
 
   <div class="board">
-    <div class="col hl" id="hl"></div>
+    <div class="col hl wide" id="hl"></div>
     <div class="days" id="days"></div>
     <div class="col wide" id="budget"></div>
     <div class="col" id="flights"></div>
@@ -133,11 +144,24 @@
 <script>
   // The whole plan lives in this browser (and localStorage). The server only calls the AI.
   const STORE = "nextstop-calendar-v1";
+  // Every decision, in the High level column: [key, label, plan field, placeholder]
+  const TOPICS = [
+    ["where", "Where", "where", "e.g. Guatemala"],
+    ["dates", "Dates", "when", "e.g. April"],
+    ["length", "How many days", "length", "e.g. 7–10 days"],
+    ["activities", "Activities", "what", "e.g. Acatenango hike, the lake"],
+    ["stay", "Accommodations", "stay", "e.g. quiet guesthouses"],
+    ["flights", "Flights", "flightsNote", "e.g. cheapest round trip"],
+    ["budget", "Budget", "budget", "e.g. cheap, ~$1,200 total"],
+  ];
+  const STAGE_NAME = { 1: "Rough idea", 2: "Workshopping", 3: "Locked in" };
+  const STAGE_SHORT = { 1: "Rough", 2: "Workshop", 3: "Locked" };
   const KIND_ICON = { flight: "✈️", transport: "🚐", activity: "🥾", rest: "😌", custom: "" };
 
   const emptyPlan = () => ({
     origin: "", where: "", what: "", budget: "", length: "", when: "", stay: "",
-    startDate: "", thoughts: "",
+    flightsNote: "", startDate: "", thoughts: "",
+    stages: {},        // topic key -> 1 rough idea, 2 workshopping, 3 locked in (missing = not started)
     days: [],          // [{ items: [{ uid, id, part, of, title, kind, leg, est_cost, watch_out, src }] }]
     sandbox: [],       // not-yet-placed building blocks: { id, title, kind, leg, days, est_cost, why, watch_out }
     legs: {},          // { "Antigua": { nightly, stay_note, order } }
@@ -157,7 +181,7 @@
   const box = (k, ph, rows = 2) => `<textarea rows="${rows}" placeholder="${esc(ph)}" oninput="plan['${k}'] = this.value; save(); renderStatus()">${esc(plan[k])}</textarea>`;
 
   function load() {
-    try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.days)) return { ...emptyPlan(), ...s }; } catch (e) {}
+    try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.days)) return { ...emptyPlan(), ...s, stages: s.stages || {} }; } catch (e) {}
     return emptyPlan();
   }
   function save() { try { localStorage.setItem(STORE, JSON.stringify(plan)); } catch (e) {} }
@@ -230,12 +254,23 @@
   function renderStatic() {
     $("hl").innerHTML = `
       <div class="col-title">HIGH LEVEL</div>
-      <div class="scroll">
-        <div class="lbl">Where:</div>${box("where", "e.g. Guatemala")}
-        <div class="lbl">General what to do:</div>${box("what", "e.g. Acatenango hike, Lake Atitlán, a little Antigua", 4)}
-        <div class="lbl">Accommodation:</div>${box("stay", "e.g. quiet guesthouses with a kitchen", 3)}
-        <div class="lbl">Rough length / when:</div>${box("length", "e.g. 7–10 days", 1)}${box("when", "e.g. April", 1)}
+      <div class="scroll">${TOPICS.map(([key, label, field, ph]) => {
+        const st = plan.stages[key];
+        return `
+        <div class="topic">
+          <div class="topic-head"><span class="lbl">${label}:</span><span class="topic-state">${st ? "" : "Not started"}</span></div>
+          ${box(field, ph, 1)}
+          <div class="stages">${[1, 2, 3].map(n => `<button class="s${n} ${st === n ? "on" : ""}" title="${STAGE_NAME[n]}"
+            onclick="setStage('${key}', ${n})">${STAGE_SHORT[n]}</button>`).join("")}</div>
+        </div>`;
+      }).join("")}
       </div>`;
+  }
+
+  // Click a stage to set it; click the one that's already on to go back to "Not started".
+  function setStage(key, n) {
+    if (plan.stages[key] === n) delete plan.stages[key]; else plan.stages[key] = n;
+    save(); renderStatic();
   }
 
   function renderDays() {
@@ -288,7 +323,6 @@
         ${actLines || `<div class="row"><span>Activities:</span><span class="tbd">—</span></div>`}
         ${transLines || `<div class="row"><span>Transportation:</span><span class="tbd">—</span></div>`}
         <div class="row"><span>Food: <span class="m">${b.days} days${plan.foodPerDay ? " × " + money(plan.foodPerDay) : ""}</span></span><span>${plan.foodPerDay ? money(b.food) : "?"}</span></div>
-        <div class="lbl" style="margin-top:8px">Budget idea:</div>${box("budget", "e.g. cheap, ~$1,200 total", 1)}
       </div>
       ${f.length ? diamond(`${b.total > (plan.saved ? plan.saved.total : 0) ? "MORE" : "LESS"} ACCOMMODATION / COST → ${money(b.total)}`) : ""}`;
   }
