@@ -266,6 +266,9 @@ def next_decision():
     if not open_keys:
         return jsonify({"suggestions": []})
     open_list = ", ".join(f"{k} ({CATEGORIES[k]})" for k in open_keys)
+    # The calendar's start page asks for short, high-level reasons ("brief"); the step-by-step page keeps one sentence.
+    reason_rule = ("a short phrase of 6-10 words (never more): the one high-level thing to know" if body.get("brief")
+                   else "one sentence specific to this trip")
     prompt = f"""The traveler's trip so far:
 {describe_trip(body["trip"])}
 
@@ -274,7 +277,7 @@ Still undecided: {open_list}
 Rank the undecided categories by what they should decide next, and why (e.g. what drives cost,
 what books up, what depends on what). Go big to small: the destination usually comes before dates, and dates
 before specific bookings, since the later layers depend on it. Return JSON:
-{{"suggestions": [{{"category": "the short key, e.g. \\"{open_keys[0]}\\"", "reason": "one sentence specific to this trip"}}]}}"""
+{{"suggestions": [{{"category": "the short key, e.g. \\"{open_keys[0]}\\"", "reason": "{reason_rule}"}}]}}"""
     response = run(prompt)
     # The AI sometimes answers with the label ("When (dates...)") instead of the key ("when"). Map it back.
     data = response.get_json() if hasattr(response, "get_json") else None

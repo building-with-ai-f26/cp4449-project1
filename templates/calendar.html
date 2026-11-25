@@ -537,6 +537,9 @@
   function busy(btn, label) { btn.disabled = true; btn.dataset.label = btn.innerHTML; btn.innerHTML = `<span class="spinner"></span>${label}`; }
   function done(btn) { btn.disabled = false; btn.innerHTML = btn.dataset.label; }
 
+  // At most n words, with "…" if it was cut.
+  function short(text, n) { const w = String(text || "").trim().split(/\s+/); return w.length > n ? w.slice(0, n).join(" ").replace(/[,;:.]$/, "") + "…" : w.join(" "); }
+
   // ---------- Start: what you know already -> what to decide first ----------
   function renderStart() {
     $("view-start").innerHTML = `
@@ -549,12 +552,16 @@
           ${TOPICS.map(([key, label, , ph]) => `<label for="k-${key}">${label}</label>
             <input type="text" id="k-${key}" value="${esc(R(key).rough || pickOf(key))}" placeholder="${esc(ph)}" />`).join("")}
         </div>
-        <div class="actions"><button class="btn" id="first-btn" onclick="saveKnowns()">Next: what should I decide first? →</button></div>
+        <div class="actions">
+          <button class="btn" id="first-btn" onclick="saveKnowns(true)">✨ Suggest what to decide first</button>
+          <button class="btn btn-line" onclick="saveKnowns(false)">I'll choose</button>
+        </div>
       </section>
       <section id="first"></section>`;
   }
 
-  async function saveKnowns() {
+  // Save what they know, then either let AI rank the topics or let them pick one themselves.
+  async function saveKnowns(useAI) {
     plan.origin = $("k-origin").value.trim();
     for (const [key] of TOPICS) {
       const v = $("k-" + key).value.trim();
@@ -562,13 +569,20 @@
       if (v && !plan.stages[key]) plan.stages[key] = 1;
     }
     save();
-    const btn = $("first-btn"); busy(btn, "Thinking about what to decide first…");
+    if (!useAI) {
+      $("first").innerHTML = `<section class="panel pad"><h3>What do you want to decide first?</h3>
+        ${TOPICS.map(([key, label]) => `<div class="suggest"><div class="r"><b>${label}</b></div>
+          <a class="btn btn-line btn-sm" href="/research/${key}">Research this →</a></div>`).join("")}</section>`;
+      $("first").scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    const btn = $("first-btn"); busy(btn, "Thinking…");
     try {
-      const data = await post("/api/next", { trip: tripForAI() });
+      const data = await post("/api/next", { trip: tripForAI(), brief: true });
       const list = (data.suggestions || []).map(s => ({ ...s, key: FROM_AI_KEY[s.category] })).filter(s => s.key);
       $("first").innerHTML = `<section class="panel pad"><h3>What to decide first</h3>
         ${list.map((s, i) => `<div class="suggest"><span class="n">${i + 1}</span>
-          <div class="r"><b>${topicInfo(s.key)[1]}</b>${esc(s.reason)}</div>
+          <div class="r"><b>${topicInfo(s.key)[1]}</b>${esc(short(s.reason, 10))}</div>
           <a class="btn ${i ? "btn-line" : ""} btn-sm" href="/research/${s.key}">Research this →</a></div>`).join("")}
         <div class="actions"><a class="btn btn-line" href="/calendar">Go to my calendar</a></div></section>`;
       $("first").scrollIntoView({ behavior: "smooth" });
