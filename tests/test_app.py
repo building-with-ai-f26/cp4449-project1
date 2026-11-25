@@ -127,8 +127,13 @@ class CalendarPagesTest(unittest.TestCase):
         self.client = app.test_client()
 
     def test_pages_load(self):
-        for url in ["/calendar", "/calendar/start", "/research/where", "/research/budget"]:
+        for url in ["/", "/step-by-step", "/calendar", "/calendar/start", "/research/where", "/research/budget"]:
             self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    def test_home_is_the_calendar_but_old_trip_links_still_work(self):
+        self.assertIn(b"Trip calendar", self.client.get("/").data)
+        self.assertNotIn(b"Trip calendar", self.client.get("/?trip=11111111-1111-1111-1111-111111111111").data)
+        self.assertNotIn(b"Trip calendar", self.client.get("/step-by-step").data)
 
     def test_unknown_research_topic_is_404(self):
         self.assertEqual(self.client.get("/research/nope").status_code, 404)

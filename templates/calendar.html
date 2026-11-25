@@ -186,7 +186,7 @@
   <header>
     <div class="logo"><span class="logo-mark" aria-hidden="true">✈︎</span><div>next<span>stop</span></div></div>
     <div class="header-links">
-      <a class="link-btn" href="/">Step-by-step view</a>
+      <a class="link-btn" href="/step-by-step">Step-by-step view</a>
       <button class="link-btn" onclick="loadSample()">Load Guatemala sample</button>
       <button class="link-btn" onclick="startOver()">Start over</button>
     </div>
@@ -543,7 +543,7 @@
   // ---------- Start: what you know already -> what to decide first ----------
   function renderStart() {
     $("view-start").innerHTML = `
-      <a class="back" href="/calendar">← Back to calendar</a>
+      <a class="back" href="/">← Back to calendar</a>
       <h1>Start planning your trip</h1>
       <p class="lead">Rough is fine. Skip what you don't know.</p>
       <section class="panel pad">
@@ -584,7 +584,7 @@
         ${list.map((s, i) => `<div class="suggest"><span class="n">${i + 1}</span>
           <div class="r"><b>${topicInfo(s.key)[1]}</b>${esc(short(s.reason, 10))}</div>
           <a class="btn ${i ? "btn-line" : ""} btn-sm" href="/research/${s.key}">Research this →</a></div>`).join("")}
-        <div class="actions"><a class="btn btn-line" href="/calendar">Go to my calendar</a></div></section>`;
+        <div class="actions"><a class="btn btn-line" href="/">Go to my calendar</a></div></section>`;
       $("first").scrollIntoView({ behavior: "smooth" });
     } catch (e) { showError(e.message); }
     done(btn);
@@ -596,7 +596,7 @@
     const r = R(key), st = plan.stages[key];
     const added = new Set(r.factors.map(f => f.name.toLowerCase()));
     $("view-research").innerHTML = `
-      <a class="back" href="/calendar">← Back to calendar</a>
+      <a class="back" href="/">← Back to calendar</a>
       <h1>${label} ${stageBadge(st)}</h1>
       <section class="panel pad">
         <h3>1. Rough idea</h3>
@@ -671,7 +671,7 @@
     plan.stages[key] = stage;
     applyToCalendar(key, text);
     save();
-    location.href = "/calendar";
+    location.href = "/";
   }
 
   // Some picks change the calendar's shape right away.
@@ -696,8 +696,8 @@
     }
   }
 
-  function loadSample() { plan = samplePlan(); save(); location.href = "/calendar"; }
-  function startOver() { plan = emptyPlan(); save(); location.href = "/calendar"; }
+  function loadSample() { plan = samplePlan(); save(); location.href = "/"; }
+  function startOver() { plan = emptyPlan(); save(); location.href = "/"; }
 
   // Show the right view for this URL.
   if (VIEW === "start") { $("view-start").hidden = false; renderStart(); }
