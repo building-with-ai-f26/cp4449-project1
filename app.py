@@ -182,6 +182,14 @@ def bad_request(e):
 
 @app.route("/")
 def home():
+    # The trip calendar is the home page. Old saved-trip links (/?trip=<uuid>) still open the step-by-step app.
+    if request.args.get("trip"):
+        return step_by_step()
+    return calendar_page("overview")
+
+
+@app.route("/step-by-step")
+def step_by_step():
     # PostHog analytics (optional). The phc_ key is public, but we still keep config in .env.
     return render_template(
         "index.html",
