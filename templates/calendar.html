@@ -127,6 +127,7 @@
     <div class="logo"><span class="logo-mark" aria-hidden="true">✈︎</span><div>next<span>stop</span></div></div>
     <div class="header-links">
       <a class="link-btn" href="/">Step-by-step view</a>
+      <button class="link-btn" onclick="loadSample()">Load Guatemala sample</button>
       <button class="link-btn" onclick="startOver()">Start over</button>
     </div>
   </header>
@@ -166,6 +167,36 @@
     flights: null, foodPerDay: 0, suggestedDays: null,
     saved: null,       // snapshot from "Save this version", used for ripple flags
   });
+  // Dummy Guatemala trip, so there's something to look at. Shown when nothing is saved yet.
+  function samplePlan() {
+    let n = 0;
+    const it = (title, kind, leg, est_cost, extra = {}) => ({ uid: "s" + n++, id: "s" + n, part: 1, of: 1, title, kind, leg, est_cost, ...extra });
+    const hike = { id: "hike", of: 2, kind: "activity", leg: "Antigua", title: "Acatenango overnight hike",
+                   watch_out: "Gets below freezing at the top: rent a jacket" };
+    return {
+      ...emptyPlan(),
+      where: "Guatemala: Antigua → Lake Atitlán → Tikal", when: "April 10–18", length: "9 days",
+      what: "Acatenango hike, the lake, Tikal ruins", stay: "Cheap guesthouses, one lakeside", flightsNote: "From JFK, cheapest round trip",
+      budget: "~$1,200 total",
+      stages: { where: 2, dates: 2, length: 3, activities: 2, stay: 2, flights: 1, budget: 2 },
+      origin: "New York", startDate: "2027-04-10",
+      legs: { "Antigua": { nightly: 35, order: 0 }, "Lake Atitlán": { nightly: 50, order: 1 }, "Tikal": { nightly: 35, order: 2 } },
+      flights: { route: "JFK ⇄ Guatemala City", est_cost: 480 },
+      foodPerDay: 15,
+      days: [
+        { items: [it("Fly JFK → Guatemala City", "flight", "Antigua", 0), it("Shuttle to Antigua", "transport", "Antigua", 30)] },
+        { items: [it("Walk the old town + cafés", "activity", "Antigua", 20)] },
+        { items: [{ ...hike, uid: "h1", part: 1, est_cost: 90 }] },
+        { items: [{ ...hike, uid: "h2", part: 2, est_cost: 0 }, it("Shuttle to Lake Atitlán", "transport", "Lake Atitlán", 25)] },
+        { items: [it("Kayak + swim", "activity", "Lake Atitlán", 25)] },
+        { items: [it("Indian Nose sunrise", "activity", "Lake Atitlán", 15)] },
+        { items: [it("Travel to Flores", "transport", "Tikal", 60)] },
+        { items: [it("Tikal ruins at sunrise", "activity", "Tikal", 50)] },
+        { items: [it("Fly home", "flight", "Tikal", 0)] },
+      ],
+    };
+  }
+
   let plan = load();
   let nextId = Date.now();
   const uid = () => String(nextId++);
@@ -180,7 +211,7 @@
 
   function load() {
     try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.days)) return { ...emptyPlan(), ...s, stages: s.stages || {} }; } catch (e) {}
-    return emptyPlan();
+    return samplePlan();
   }
   function save() { try { localStorage.setItem(STORE, JSON.stringify(plan)); } catch (e) {} }
   function showError(msg) { $("error").innerHTML = msg ? `<div class="error">${esc(msg)}</div>` : ""; }
@@ -257,7 +288,7 @@
         return `
         <div class="topic">
           <div class="topic-head"><span class="lbl">${label}:</span><span class="topic-state">${st ? "" : "Not started"}</span></div>
-          ${box(field, ph, 1)}
+          ${box(field, ph, 2)}
           <div class="stages">${[1, 2, 3].map(n => `<button class="s${n} ${st === n ? "on" : ""}" title="${STAGE_NAME[n]}"
             onclick="setStage('${key}', ${n})">${STAGE_SHORT[n]}</button>`).join("")}</div>
         </div>`;
@@ -357,6 +388,12 @@
       for (const d of plan.days) d.items = d.items.filter(it => it.id !== id);
       if (srcById[id]) plan.sandbox.push(srcById[id]);
     }
+    render();
+  }
+
+  function loadSample() {
+    plan = samplePlan();
+    renderStatic();
     render();
   }
 
