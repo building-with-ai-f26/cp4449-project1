@@ -29,7 +29,7 @@
     #error { padding: 0 24px; }
     .error { background: #fdecec; color: #991b1b; border: 1px solid #f5c2c2; border-radius: 10px; padding: 8px 12px; font-weight: 600; font-size: 14px; }
 
-    /* One horizontal board, like the mockup: High level | days | Sandbox | Thoughts | Budget | Flight details | Trip status */
+    /* One horizontal board, like the mockup: High level | days | Budget | Flight details | Trip status */
     .board { display: flex; gap: 22px; align-items: flex-start; overflow-x: auto; padding: 20px 24px 100px; }
     .col { flex: 0 0 auto; width: 190px; height: var(--col-h); background: var(--card); border: 1px solid var(--line);
            padding: 14px 12px; font-size: 13px; position: relative; display: flex; flex-direction: column; gap: 8px; }
@@ -124,8 +124,6 @@
   <div class="board">
     <div class="col hl" id="hl"></div>
     <div class="days" id="days"></div>
-    <div class="col wide" id="sandbox"></div>
-    <div class="col" id="thoughts-col"></div>
     <div class="col wide" id="budget"></div>
     <div class="col" id="flights"></div>
     <div class="col" id="status"></div>
@@ -135,7 +133,6 @@
 <script>
   // The whole plan lives in this browser (and localStorage). The server only calls the AI.
   const STORE = "nextstop-calendar-v1";
-  const AI_FIELDS = ["origin", "where", "what", "budget", "length", "when", "stay"];  // sent to /api/sandbox
   const KIND_ICON = { flight: "✈️", transport: "🚐", activity: "🥾", rest: "😌", custom: "" };
 
   const emptyPlan = () => ({
@@ -225,7 +222,7 @@
 
   // ---------- rendering ----------
   function render() {
-    renderDays(); renderSandbox(); renderBudget(); renderFlights(); renderStatus();
+    renderDays(); renderBudget(); renderFlights(); renderStatus();
     save();
   }
 
@@ -239,10 +236,6 @@
         <div class="lbl">Accommodation:</div>${box("stay", "e.g. quiet guesthouses with a kitchen", 3)}
         <div class="lbl">Rough length / when:</div>${box("length", "e.g. 7–10 days", 1)}${box("when", "e.g. April", 1)}
       </div>`;
-    $("thoughts-col").innerHTML = `
-      <div class="col-title">Thoughts:</div>
-      <textarea style="flex:1" placeholder="• not enough days at the lake, need to adjust&#10;• the hiking company only runs certain days"
-        oninput="plan.thoughts = this.value; save()">${esc(plan.thoughts)}</textarea>`;
   }
 
   function renderDays() {
@@ -253,7 +246,7 @@
           <div>${KIND_ICON[it.kind] ? KIND_ICON[it.kind] + " " : ""}${esc(it.title)}</div>
           ${it.of > 1 ? `<div class="part">day ${it.part} of ${it.of}</div>` : ""}
           ${it.watch_out && it.part === 1 ? `<div class="w" title="${esc(it.watch_out)}">⚠ watch out</div>` : ""}
-          <button class="x" title="Remove (back to the sandbox)" onclick="unplace('${it.id}')">×</button>
+          <button class="x" title="Remove" onclick="unplace('${it.id}')">×</button>
         </div>`).join("");
       return `
         <div class="daycol">
@@ -268,35 +261,8 @@
           </div>
         </div>`;
     }).join("");
-    $("days").innerHTML = (cols || `<div class="empty-days">No days yet. Get ideas in the <strong>Sandbox</strong> and slot them in, or add a day.</div>`) +
+    $("days").innerHTML = (cols || `<div class="empty-days">No days yet. Click <strong>+ day</strong> to start.</div>`) +
       `<div class="add-day" onclick="insertDay(${plan.days.length - 1})">+ day</div>`;
-  }
-
-  function renderSandbox() {
-    const legNames = Object.keys(plan.legs).sort((a, b) => plan.legs[a].order - plan.legs[b].order);
-    const dayOptions = plan.days.map((_, i) => `<option value="${i}">Day ${i + 1}</option>`).join("");
-    const legsHtml = legNames.map((leg, n) => {
-      const items = plan.sandbox.filter(it => it.leg === leg);
-      const info = plan.legs[leg];
-      return `
-        <div class="leg">
-          <div class="leg-name">LEG ${n + 1}: ${esc(leg)}</div>
-          ${info.nightly ? `<div class="leg-meta">stays ~${money(info.nightly)}/night${info.stay_note ? " · " + esc(info.stay_note) : ""}</div>` : ""}
-          <ul class="sb">${items.map(it => `
-            <li>${esc(it.title)} <span class="meta">${it.days > 1 ? it.days + " days · " : ""}${it.est_cost ? "~" + money(it.est_cost) : ""}</span>
-              ${it.why ? `<div class="meta">${esc(it.why)}</div>` : ""}
-              ${it.watch_out ? `<div class="w">⚠ ${esc(it.watch_out)}</div>` : ""}
-              <select onchange="place('${it.id}', this.value)"><option value="">slot into…</option>${dayOptions}<option value="end">new day at end</option></select>
-            </li>`).join("") || `<li class="meta">all slotted in</li>`}
-          </ul>
-          <button class="btn btn-line btn-tiny" onclick="suggest('${esc(leg).replace(/'/g, "\\'")}')">↻ more ideas</button>
-        </div>`;
-    }).join("");
-    $("sandbox").innerHTML = `
-      <div class="col-title">SANDBOX:</div>
-      <div class="col-note">(a place where the things you want to do live, so you can slot them in and out)</div>
-      <div class="scroll">${legsHtml || `<div class="hint">Fill in the High level, then get ideas. They show up here grouped by leg.</div>`}</div>
-      <button class="btn" id="suggest-btn" onclick="suggest()">✨ ${legNames.length ? "Refresh ideas" : "Get ideas"}</button>`;
   }
 
   function diamond(text, small) { return `<div class="diamond ${small ? "small" : ""}"><span>${esc(text)}</span></div>`; }
@@ -343,7 +309,7 @@
           <div class="row"><span>Estimate</span><span>~${money(fl.est_cost)}</span></div>
           <div class="row"><span>Out</span><span>${n ? (plan.startDate ? esc(dateFor(0)) : "Day 1") : "TBD"}</span></div>
           <div class="row"><span>Back</span><span>${n ? (plan.startDate ? esc(dateFor(n - 1)) : "Day " + n) : "TBD"}</span></div>
-          ${fl.watch_out ? `<div class="w-box">⚠ ${esc(fl.watch_out)}</div>` : ""}` : `<div class="hint">An estimate appears once you get ideas.</div>`}
+          ${fl.watch_out ? `<div class="w-box">⚠ ${esc(fl.watch_out)}</div>` : ""}` : `<div class="hint">Estimates will come from the Flights research page.</div>`}
         ${f.length ? `<div class="flag-list"><ul>${f.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
       </div>
       ${f.length ? diamond("CHANGE FLIGHT DAYS", true) : ""}`;
@@ -371,21 +337,6 @@
 
   // ---------- actions ----------
   function ensureDays(count) { while (plan.days.length < count) plan.days.push({ items: [] }); }
-
-  function place(id, where) {
-    if (where === "") return;
-    const idx = plan.sandbox.findIndex(it => it.id === id);
-    if (idx < 0) return;
-    const item = plan.sandbox[idx];
-    const start = where === "end" ? plan.days.length : Number(where);
-    ensureDays(start + item.days);
-    for (let p = 0; p < item.days; p++) {
-      plan.days[start + p].items.push({ uid: uid(), id: item.id, part: p + 1, of: item.days, title: item.title,
-        kind: item.kind, leg: item.leg, est_cost: p === 0 ? item.est_cost : 0, watch_out: item.watch_out, src: item });
-    }
-    plan.sandbox.splice(idx, 1);
-    render();
-  }
 
   // Remove every day-part of an item; sandbox items go back to the sandbox, your own items are deleted.
   function unplace(id) {
@@ -415,38 +366,6 @@
     for (const id of new Set(removed.map(it => it.id))) {
       for (const d of plan.days) d.items = d.items.filter(it => it.id !== id);
       if (srcById[id]) plan.sandbox.push(srcById[id]);
-    }
-    render();
-  }
-
-  async function suggest(leg) {
-    showError("");
-    const btn = $("suggest-btn");
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spinner"></span>${leg ? "More for " + esc(leg) + "…" : "Thinking…"}`;
-    try {
-      const exclude = leg ? [...plan.sandbox, ...plan.days.flatMap(d => d.items)].filter(it => it.leg === leg).map(it => it.title) : [];
-      const highLevel = Object.fromEntries(AI_FIELDS.map(k => [k, plan[k]]));
-      const res = await fetch("/api/sandbox", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: highLevel, leg: leg || "", exclude: [...new Set(exclude)] }) });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "Something went wrong.");
-      if (!leg) {
-        if (data.flights) plan.flights = data.flights;
-        if (data.food_per_day) plan.foodPerDay = data.food_per_day;
-        if (data.suggested_days) plan.suggestedDays = data.suggested_days;
-      }
-      const have = new Set([...plan.sandbox, ...plan.days.flatMap(d => d.items)].map(it => it.title.toLowerCase()));
-      for (const l of data.legs) {
-        const name = leg || l.name;
-        if (!plan.legs[name]) plan.legs[name] = { nightly: l.nightly, stay_note: l.stay_note, order: Object.keys(plan.legs).length };
-        for (const it of l.items) {
-          if (have.has(it.title.toLowerCase())) continue;
-          plan.sandbox.push({ ...it, id: uid(), leg: name });
-        }
-      }
-    } catch (err) {
-      showError(err.message);
     }
     render();
   }
